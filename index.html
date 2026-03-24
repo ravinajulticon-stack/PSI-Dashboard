@@ -1733,6 +1733,8 @@ async function supaCount(table) {
 }
 
 // On page load — pull latest from Supabase into localStorage
+function showSyncStatus(msg, type='success') { showToast(msg, type); }
+
 window.addEventListener('load', () => {
   // STEP 1: Render immediately from localStorage (instant, no waiting)
   if(typeof renderDashboard==='function') renderDashboard();
