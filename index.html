@@ -1783,6 +1783,8 @@ window.addEventListener('load', () => {
       showSyncStatus('Offline — local data','warning');
     }
   }, 1000); // delay 1s so UI renders first
+}); // end window.addEventListener('load')
+
 // Override save functions to ALSO push to Supabase immediately
 const _ph_orig_save = window.phSaveEntries;
 window.phSaveEntries = function(entries) {
