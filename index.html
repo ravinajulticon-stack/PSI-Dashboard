@@ -2462,7 +2462,7 @@ function submitEntry(){
   entries.push({week,dateRange,month,model,region,p,s,re,proj,i,loggedAt:new Date().toISOString().slice(0,10)});
   saveEntries(entries);
   showToast(`✓ Saved ${week} · ${model}`,'success');
-  clearForm();renderRecentHistory();
+  clearForm();renderRecentHistory();renderDashboard();
 }
 
 function submitBulk(){
@@ -2487,7 +2487,7 @@ function submitBulk(){
   document.getElementById('bWeek').value='';document.getElementById('bDateRange').value='';
   document.getElementById('bMonth').value='';
   document.querySelectorAll('.bulk-p,.bulk-s,.bulk-re,.bulk-proj,.bulk-i').forEach(el=>el.value=0);
-  renderRecentHistory();
+  renderRecentHistory();renderDashboard();
 }
 
 function clearForm(){
@@ -5046,7 +5046,7 @@ function philipsSubmitEntry(){
   const entries=phGetEntries();
   entries.push({week,dateRange,month,model,region:'AU',p,s,re,proj,i,loggedAt:new Date().toISOString().slice(0,10)});
   phSaveEntries(entries);showToast(`Saved ${week} · ${model}`,'success');
-  philipsClearForm();phRenderRecentHistory();
+  philipsClearForm();phRenderRecentHistory();phRenderDashboard();
 }
 
 function philipsSubmitBulk(){
@@ -5070,7 +5070,7 @@ function philipsSubmitBulk(){
   phSaveEntries(entries);showToast(`Saved ${week} for ${count} models`,'success');
   document.getElementById('pbWeek').value='';document.getElementById('pbDateRange').value='';document.getElementById('pbMonth').value='';
   document.querySelectorAll('.ph-bulk-p,.ph-bulk-s,.ph-bulk-re,.ph-bulk-proj,.ph-bulk-i').forEach(el=>el.value=0);
-  phRenderRecentHistory();
+  phRenderRecentHistory();phRenderDashboard();
 }
 
 function philipsClearForm(){
@@ -8247,7 +8247,7 @@ function plocksSubmitEntry(){
     i:parseInt(document.getElementById('plI').value)||0,
     loggedAt:new Date().toISOString().slice(0,10)});
   plSaveEntries(entries);showToast(`Saved ${week} · ${model}`,'success');
-  plocksClearForm();plRenderRecentHistory();
+  plocksClearForm();plRenderRecentHistory();plRenderDashboard();
 }
 
 function plocksSubmitBulk(){
@@ -8269,7 +8269,7 @@ function plocksSubmitBulk(){
   plSaveEntries(entries);showToast(`Saved ${week} for ${count} models`,'success');
   document.getElementById('plbWeek').value='';document.getElementById('plbDateRange').value='';document.getElementById('plbMonth').value='';
   document.querySelectorAll('.pl-bulk-p,.pl-bulk-s,.pl-bulk-re,.pl-bulk-proj,.pl-bulk-i').forEach(el=>el.value=0);
-  plRenderRecentHistory();
+  plRenderRecentHistory();plRenderDashboard();
 }
 
 function plocksClearForm(){
