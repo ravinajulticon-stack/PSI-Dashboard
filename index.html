@@ -613,13 +613,18 @@ table.dash-table tbody td { padding: 10px 12px; color: var(--mac-text2); vertica
 .raw-table tbody td.null-val { color: var(--mac-text4); opacity: 0.6; }
 
 /* ── ENTRY VIEW ── */
-.entry-layout { display: grid; grid-template-columns: 520px 1fr; gap: 16px; }
+.entry-layout { display: grid; grid-template-columns: 520px 1fr; gap: 16px; align-items: start; min-width: 0; overflow: hidden; }
 .entry-form-card, .entry-history-card {
   background: var(--mac-surface);
   border: 1px solid var(--mac-border);
   border-radius: var(--mac-radius);
   padding: 18px;
   box-shadow: var(--mac-shadow);
+  min-width: 0;
+}
+.entry-form-card {
+  position: sticky;
+  top: 96px;
 }
 .form-title { font-size: 14px; font-weight: 700; color: var(--mac-text); margin-bottom: 14px; }
 .form-group { margin-bottom: 11px; }
@@ -837,7 +842,7 @@ input.pl-bulk-p, input.pl-bulk-s, input.pl-bulk-re, input.pl-bulk-proj, input.pl
 }
 
 /* Recent entries as raw table + edit modal */
-.recent-raw-wrap { overflow-x:auto; width:100%; }
+.recent-raw-wrap { overflow-x:auto; width:100%; max-width:100%; }
 .recent-raw-table { border-collapse:separate; border-spacing:0; font-size:11px; white-space:nowrap; width:max-content; min-width:100%; }
 .recent-raw-table th { position:sticky; top:0; background:var(--mac-surface2); padding:7px 10px;
   text-align:center; font-size:10px; font-weight:600; color:var(--mac-text2);
