@@ -1789,33 +1789,40 @@ window.addEventListener('load', () => {
 }); // end window.addEventListener('load')
 
 // Override save functions to ALSO push to Supabase immediately
+// Helper: update an existing row in Supabase by id
+async function supaUpdate(table, id, row) {
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method:'PATCH', headers:{...SH,'Prefer':'return=minimal'}, body:JSON.stringify(row)
+    });
+  } catch(e) {}
+}
+
 const _ph_orig_save = window.phSaveEntries;
 window.phSaveEntries = function(entries) {
-  // Save locally first (instant)
   localStorage.setItem('philips_psi_v2_entries', JSON.stringify(entries));
-  // Find new entries (no _id = not from DB yet) and push to Supabase
   const newEntries = entries.filter(e => !e._id);
-  if(newEntries.length) {
-    supaInsert('philips_entries', newEntries.map(e=>mapToDB(e,'AU')));
-  }
+  if(newEntries.length) supaInsert('philips_entries', newEntries.map(e=>mapToDB(e,'AU')));
+  const editedEntries = entries.filter(e => e._id && e._edited);
+  editedEntries.forEach(e => { supaUpdate('philips_entries', e._id, mapToDB(e,'AU')); delete e._edited; });
 };
 
 const _sam_orig_save = window.saveEntries;
 window.saveEntries = function(entries) {
   localStorage.setItem('psi_v2_entries', JSON.stringify(entries));
   const newEntries = entries.filter(e => !e._id);
-  if(newEntries.length) {
-    supaInsert('samsung_entries', newEntries.map(e=>mapToDB(e,'AU')));
-  }
+  if(newEntries.length) supaInsert('samsung_entries', newEntries.map(e=>mapToDB(e,'AU')));
+  const editedEntries = entries.filter(e => e._id && e._edited);
+  editedEntries.forEach(e => { supaUpdate('samsung_entries', e._id, mapToDB(e,'AU')); delete e._edited; });
 };
 
 const _pl_orig_save = window.plSaveEntries;
 window.plSaveEntries = function(entries) {
   localStorage.setItem('plocks_psi_v2_entries', JSON.stringify(entries));
   const newEntries = entries.filter(e => !e._id);
-  if(newEntries.length) {
-    supaInsert('plocks_entries', newEntries.map(e=>mapToDB(e,'AU')));
-  }
+  if(newEntries.length) supaInsert('plocks_entries', newEntries.map(e=>mapToDB(e,'AU')));
+  const editedEntries = entries.filter(e => e._id && e._edited);
+  editedEntries.forEach(e => { supaUpdate('plocks_entries', e._id, mapToDB(e,'AU')); delete e._edited; });
 };
 
 // ══════════════════════════════════════
@@ -2432,6 +2439,7 @@ function saveEditEntry(){
   const entries=getEntries();
   entries[samEditIdx]={
     ...entries[samEditIdx],
+    _edited:true,
     week:document.getElementById('editWeek').value.trim(),
     dateRange:document.getElementById('editDateRange').value.trim(),
     month:document.getElementById('editMonth').value.trim(),
@@ -2443,7 +2451,7 @@ function saveEditEntry(){
   };
   saveEntries(entries);
   closeEditModal();
-  renderRecentHistory();
+  renderRecentHistory();renderDashboard();
   showToast('Entry updated.','success');
 }
 document.getElementById('editModalOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('editModalOverlay'))closeEditModal();});
@@ -5168,6 +5176,7 @@ function philipsSaveEditEntry(){
   const entries=phGetEntries();
   entries[phEditIdx]={
     ...entries[phEditIdx],
+    _edited:true,
     week:document.getElementById('philipsEditWeek').value.trim(),
     dateRange:document.getElementById('philipsEditDateRange').value.trim(),
     month:document.getElementById('philipsEditMonth').value.trim(),
@@ -5179,7 +5188,7 @@ function philipsSaveEditEntry(){
   };
   phSaveEntries(entries);
   closePhilipsEditModal();
-  phRenderRecentHistory();
+  phRenderRecentHistory();phRenderDashboard();
   showToast('Entry updated.','success');
 }
 document.getElementById('philipsEditModalOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('philipsEditModalOverlay'))closePhilipsEditModal();});
@@ -8356,6 +8365,7 @@ function plocksSaveEditEntry(){
   if(plEditIdx===null)return;
   const entries=plGetEntries();
   entries[plEditIdx]={...entries[plEditIdx],
+    _edited:true,
     week:document.getElementById('plocksEditWeek').value.trim(),
     dateRange:document.getElementById('plocksEditDateRange').value.trim(),
     month:document.getElementById('plocksEditMonth').value.trim(),
@@ -8365,7 +8375,7 @@ function plocksSaveEditEntry(){
     proj:parseInt(document.getElementById('plocksEditProj').value)||0,
     i:parseInt(document.getElementById('plocksEditI').value)||0,
   };
-  plSaveEntries(entries);closePlocksEditModal();plRenderRecentHistory();showToast('Entry updated.','success');
+  plSaveEntries(entries);closePlocksEditModal();plRenderRecentHistory();plRenderDashboard();showToast('Entry updated.','success');
 }
 document.getElementById('plocksEditModalOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('plocksEditModalOverlay'))closePlocksEditModal();});
 
