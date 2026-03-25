@@ -586,14 +586,14 @@ table.dash-table tbody td { padding: 10px 12px; color: var(--mac-text2); vertica
 
 /* ── RAW DATA TABLE ── */
 .raw-table-wrap { overflow-x: auto; }
-.raw-table { border-collapse: collapse; font-size: 11px; white-space: nowrap; width: 100%; }
+.raw-table { border-collapse: separate; border-spacing: 0; font-size: 11px; white-space: nowrap; width: max-content; min-width: 100%; }
 .raw-table th, .raw-table td { padding: 7px 10px; border: 1px solid var(--mac-border); text-align: center; }
 .raw-table thead tr.row-month th { background: var(--mac-surface2); color: var(--mac-accent); font-size: 11px; font-weight: 600; border-bottom: none; }
 .raw-table thead tr.row-week th { background: var(--mac-surface2); color: var(--mac-text2); font-size: 10px; border-bottom: none; }
 .raw-table thead tr.row-col th { background: var(--mac-surface3); color: var(--mac-text3); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
 .raw-table thead tr.row-month th.model-head,
 .raw-table thead tr.row-week th.model-head,
-.raw-table thead tr.row-col th.model-head { text-align: left; background: var(--mac-surface2); color: var(--mac-text); font-size: 11px; min-width: 160px; }
+.raw-table thead tr.row-col th.model-head { text-align: left; background: var(--mac-surface2); color: var(--mac-text); font-size: 11px; min-width: 160px; position: sticky; left: 0; z-index: 3; box-shadow: 2px 0 4px rgba(0,0,0,0.06); }
 .raw-table thead tr.row-col th.col-p    { color: #34c759; }
 .raw-table thead tr.row-col th.col-s    { color: var(--mac-orange); }
 .raw-table thead tr.row-col th.col-re   { color: var(--mac-purple); }
@@ -603,7 +603,8 @@ table.dash-table tbody td { padding: 10px 12px; color: var(--mac-text2); vertica
 .raw-table tbody tr { transition: background 0.1s; }
 .raw-table tbody tr:hover td { background: rgba(0,122,255,0.04); }
 .raw-table tbody tr.total-row td { background: var(--mac-surface2); font-weight: 600; color: var(--mac-text); }
-.raw-table tbody td.model-col { text-align: left; color: var(--mac-text); font-weight: 600; background: var(--mac-surface2); position: sticky; left: 0; z-index: 2; }
+.raw-table tbody td.model-col { text-align: left; color: var(--mac-text); font-weight: 600; background: var(--mac-surface2); position: sticky; left: 0; z-index: 2; box-shadow: 2px 0 4px rgba(0,0,0,0.06); }
+.raw-table tbody tr:hover td.model-col { background: var(--mac-surface2); }
 .raw-table tbody td.val-p    { color: #34c759; }
 .raw-table tbody td.val-s    { color: var(--mac-orange); }
 .raw-table tbody td.val-re   { color: var(--mac-purple); }
