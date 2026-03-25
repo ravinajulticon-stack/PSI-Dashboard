@@ -634,6 +634,14 @@ input[type=text], input[type=number], select {
   background: var(--mac-surface2); border: 1px solid var(--mac-border2); color: var(--mac-text);
   padding: 6px 10px; border-radius: var(--mac-radius-xs); outline: none; transition: all 0.2s;
 }
+/* Hide spinners on bulk inventory inputs so numbers show fully */
+input.bulk-i::-webkit-outer-spin-button,
+input.bulk-i::-webkit-inner-spin-button,
+input.ph-bulk-i::-webkit-outer-spin-button,
+input.ph-bulk-i::-webkit-inner-spin-button,
+input.pl-bulk-i::-webkit-outer-spin-button,
+input.pl-bulk-i::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input.bulk-i, input.ph-bulk-i, input.pl-bulk-i { -moz-appearance: textfield; }
 input:focus, select:focus {
   border-color: var(--mac-accent);
   background: var(--mac-surface);
@@ -2272,7 +2280,7 @@ function recalcBulkRow(modelName, weekId, getEntriesFn, pClass, sClass, reClass,
   const s    = parseInt(sEl.value)||0;
   const re   = parseInt(reEl.value)||0;
   const proj = parseInt(projEl.value)||0;
-  const prevI = week ? getLatestInventory(getEntriesFn(), modelName, week) : 0;
+  const prevI = week ? getLatestInventory(getEntriesFn(), modelName, week) : (parseInt(iEl.dataset.baseI)||0);
   const newI  = prevI + p - s - re - proj;
   iEl.value = newI;
   iEl.style.background = 'rgba(0,122,255,0.08)';
@@ -2342,7 +2350,7 @@ function buildBulkFields(){
   document.querySelectorAll('input.bulk-p').forEach(el => {
     const mn = el.dataset.model;
     const iEl = document.querySelector('input.bulk-i[data-model="'+mn+'"]');
-    if(iEl) { iEl.value = getLatestInventory(samEntries, mn, 'W9999'); }
+    if(iEl) { const v = getLatestInventory(samEntries, mn, 'W9999'); iEl.value = v; iEl.dataset.baseI = v; }
   });
   // Auto-suggest next week
   const samWeeks = [...new Set(samEntries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
@@ -5026,7 +5034,7 @@ function renderPhilipsEntry(){
     <input type="number" class="ph-bulk-s" data-model="${m.name}" data-brand="ph" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
     <input type="number" class="ph-bulk-re" data-model="${m.name}" data-brand="ph" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
     <input type="number" class="ph-bulk-proj" data-model="${m.name}" data-brand="ph" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
-    <input type="number" class="ph-bulk-i" data-model="${m.name}" data-brand="ph" data-bulk-i-for="ph-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';" min="0" style="text-align:center;padding:5px 3px;">
+    <input type="number" class="ph-bulk-i" data-model="${m.name}" data-brand="ph" data-bulk-i-for="ph-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
   </div>`).join('');
   attachBulkAutoCalc('pbWeek', phGetEntries, 'ph-bulk-p','ph-bulk-s','ph-bulk-re','ph-bulk-proj','ph-bulk-i');
   // Pre-fill I with latest known inventory
@@ -5034,7 +5042,7 @@ function renderPhilipsEntry(){
   document.querySelectorAll('input.ph-bulk-p').forEach(el => {
     const mn = el.dataset.model;
     const iEl = document.querySelector('input.ph-bulk-i[data-model="'+mn+'"]');
-    if(iEl) { iEl.value = getLatestInventory(phEntries, mn, 'W9999'); }
+    if(iEl) { const v = getLatestInventory(phEntries, mn, 'W9999'); iEl.value = v; iEl.dataset.baseI = v; }
   });
   // Auto-suggest next week
   const phWeeks = [...new Set(phEntries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
@@ -8228,7 +8236,7 @@ function renderPlocksEntry(){
     <input type="number" class="pl-bulk-s" data-model="${m.name}" data-brand="pl" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
     <input type="number" class="pl-bulk-re" data-model="${m.name}" data-brand="pl" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
     <input type="number" class="pl-bulk-proj" data-model="${m.name}" data-brand="pl" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
-    <input type="number" class="pl-bulk-i" data-model="${m.name}" data-brand="pl" data-bulk-i-for="pl-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';" min="0" style="text-align:center;padding:5px 3px;">
+    <input type="number" class="pl-bulk-i" data-model="${m.name}" data-brand="pl" data-bulk-i-for="pl-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
   </div>`).join('');
   attachBulkAutoCalc('plbWeek', plGetEntries, 'pl-bulk-p','pl-bulk-s','pl-bulk-re','pl-bulk-proj','pl-bulk-i');
   // Pre-fill I with latest known inventory
@@ -8236,7 +8244,7 @@ function renderPlocksEntry(){
   document.querySelectorAll('input.pl-bulk-p').forEach(el => {
     const mn = el.dataset.model;
     const iEl = document.querySelector('input.pl-bulk-i[data-model="'+mn+'"]');
-    if(iEl) { iEl.value = getLatestInventory(plEntries, mn, 'W9999'); }
+    if(iEl) { const v = getLatestInventory(plEntries, mn, 'W9999'); iEl.value = v; iEl.dataset.baseI = v; }
   });
   // Auto-suggest next week
   const plWeeks = [...new Set(plEntries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
