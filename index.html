@@ -613,7 +613,7 @@ table.dash-table tbody td { padding: 10px 12px; color: var(--mac-text2); vertica
 .raw-table tbody td.null-val { color: var(--mac-text4); opacity: 0.6; }
 
 /* ── ENTRY VIEW ── */
-.entry-layout { display: grid; grid-template-columns: 420px 1fr; gap: 16px; }
+.entry-layout { display: grid; grid-template-columns: 520px 1fr; gap: 16px; }
 .entry-form-card, .entry-history-card {
   background: var(--mac-surface);
   border: 1px solid var(--mac-border);
@@ -641,7 +641,32 @@ input.ph-bulk-i::-webkit-outer-spin-button,
 input.ph-bulk-i::-webkit-inner-spin-button,
 input.pl-bulk-i::-webkit-outer-spin-button,
 input.pl-bulk-i::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-input.bulk-i, input.ph-bulk-i, input.pl-bulk-i { -moz-appearance: textfield; }
+input.bulk-i, input.ph-bulk-i, input.pl-bulk-i {
+  -moz-appearance: textfield;
+  font-size: 11px;
+  padding: 5px 2px;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+/* Hide spinners on ALL bulk inputs and maximize number display space */
+input.bulk-p::-webkit-outer-spin-button, input.bulk-p::-webkit-inner-spin-button,
+input.bulk-s::-webkit-outer-spin-button, input.bulk-s::-webkit-inner-spin-button,
+input.bulk-re::-webkit-outer-spin-button, input.bulk-re::-webkit-inner-spin-button,
+input.bulk-proj::-webkit-outer-spin-button, input.bulk-proj::-webkit-inner-spin-button,
+input.ph-bulk-p::-webkit-outer-spin-button, input.ph-bulk-p::-webkit-inner-spin-button,
+input.ph-bulk-s::-webkit-outer-spin-button, input.ph-bulk-s::-webkit-inner-spin-button,
+input.ph-bulk-re::-webkit-outer-spin-button, input.ph-bulk-re::-webkit-inner-spin-button,
+input.ph-bulk-proj::-webkit-outer-spin-button, input.ph-bulk-proj::-webkit-inner-spin-button,
+input.pl-bulk-p::-webkit-outer-spin-button, input.pl-bulk-p::-webkit-inner-spin-button,
+input.pl-bulk-s::-webkit-outer-spin-button, input.pl-bulk-s::-webkit-inner-spin-button,
+input.pl-bulk-re::-webkit-outer-spin-button, input.pl-bulk-re::-webkit-inner-spin-button,
+input.pl-bulk-proj::-webkit-outer-spin-button, input.pl-bulk-proj::-webkit-inner-spin-button
+{ -webkit-appearance: none; margin: 0; }
+input.bulk-p, input.bulk-s, input.bulk-re, input.bulk-proj,
+input.ph-bulk-p, input.ph-bulk-s, input.ph-bulk-re, input.ph-bulk-proj,
+input.pl-bulk-p, input.pl-bulk-s, input.pl-bulk-re, input.pl-bulk-proj
+{ -moz-appearance: textfield; }
 input:focus, select:focus {
   border-color: var(--mac-accent);
   background: var(--mac-surface);
@@ -657,7 +682,15 @@ select option { background: var(--mac-surface); }
 .psi-header span:nth-child(4) { color: var(--mac-teal); }
 .psi-header span:nth-child(5) { color: var(--mac-accent); }
 .psi-grid-5 { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; }
-.psi-grid-5 input { text-align: center; padding: 5px 3px; }
+.psi-grid-5 input { text-align: center; padding: 5px 2px; }
+/* Bulk entry inputs - compact padding, full number visibility */
+input.bulk-p, input.bulk-s, input.bulk-re, input.bulk-proj, input.bulk-i,
+input.ph-bulk-p, input.ph-bulk-s, input.ph-bulk-re, input.ph-bulk-proj, input.ph-bulk-i,
+input.pl-bulk-p, input.pl-bulk-s, input.pl-bulk-re, input.pl-bulk-proj, input.pl-bulk-i {
+  padding: 5px 0 !important;
+  font-size: 12px;
+  min-width: 0;
+}
 .psi-grid-5 label { text-align: center; font-size: 9px; }
 .form-actions { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 
@@ -2328,7 +2361,7 @@ function attachBulkAutoCalc(weekId, getEntriesFn, pClass, sClass, reClass, projC
 function buildBulkFields(){
   const models=getModels();
   document.getElementById('bulkFields').innerHTML=
-    `<div style="display:grid;grid-template-columns:130px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
+    `<div style="display:grid;grid-template-columns:120px repeat(4,minmax(48px,1fr)) minmax(56px,1.4fr);gap:4px;align-items:center;margin-bottom:5px;padding:0 2px;">
       <span style="font-size:10px;color:var(--mac-text3);">Model</span>
       <span style="font-size:10px;color:#34c759;text-align:center;">P</span>
       <span style="font-size:10px;color:var(--mac-orange);text-align:center;">S</span>
@@ -2336,13 +2369,13 @@ function buildBulkFields(){
       <span style="font-size:10px;color:var(--mac-teal);text-align:center;">Proj</span>
       <span style="font-size:10px;color:var(--mac-accent);text-align:center;">I <span style="font-size:8px;opacity:.7">AUTO</span></span>
     </div>`+
-    models.map(m=>`<div style="display:grid;grid-template-columns:130px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
+    models.map(m=>`<div style="display:grid;grid-template-columns:120px repeat(4,minmax(48px,1fr)) minmax(56px,1.4fr);gap:4px;align-items:center;margin-bottom:6px;">
       <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}/${m.region}">${m.name}</span>
-      <input type="number" class="bulk-p" data-model="${m.name}" data-region="${m.region}" data-bulk-prefix="sam" value="0" step="1" style="text-align:center;padding:5px 3px;">
-      <input type="number" class="bulk-s" data-model="${m.name}" data-brand="sam" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-      <input type="number" class="bulk-re" data-model="${m.name}" data-brand="sam" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-      <input type="number" class="bulk-proj" data-model="${m.name}" data-brand="sam" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-      <input type="number" class="bulk-i" data-model="${m.name}" data-brand="sam" data-bulk-i-for="sam-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
+      <input type="number" class="bulk-p" data-model="${m.name}" data-region="${m.region}" data-bulk-prefix="sam" value="0" step="1" style="text-align:center;padding:5px 0;">
+      <input type="number" class="bulk-s" data-model="${m.name}" data-brand="sam" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+      <input type="number" class="bulk-re" data-model="${m.name}" data-brand="sam" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+      <input type="number" class="bulk-proj" data-model="${m.name}" data-brand="sam" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+      <input type="number" class="bulk-i" data-model="${m.name}" data-brand="sam" data-bulk-i-for="sam-${m.name}" value="0" step="1" style="text-align:center;padding:5px 0;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
     </div>`).join('');
   attachBulkAutoCalc('bWeek', getEntries, 'bulk-p','bulk-s','bulk-re','bulk-proj','bulk-i');
   // Pre-fill I with latest known inventory (no week entered yet)
@@ -5021,20 +5054,20 @@ function renderPhilipsEntry(){
   const sel=document.getElementById('pfModel');
   sel.innerHTML='<option value="">Select model...</option>'+models.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
   const bf=document.getElementById('philipsBulkFields');
-  bf.innerHTML=`<div style="display:grid;grid-template-columns:160px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
+  bf.innerHTML=`<div style="display:grid;grid-template-columns:130px repeat(4,minmax(48px,1fr)) minmax(56px,1.4fr);gap:4px;align-items:center;margin-bottom:5px;padding:0 2px;">
     <span style="font-size:10px;color:var(--mac-text3);">Model</span>
     <span style="font-size:10px;color:#34c759;text-align:center;">P</span>
     <span style="font-size:10px;color:var(--mac-orange);text-align:center;">S</span>
     <span style="font-size:10px;color:var(--mac-purple);text-align:center;">RE</span>
     <span style="font-size:10px;color:var(--mac-teal);text-align:center;">Proj</span>
     <span style="font-size:10px;color:var(--mac-accent);text-align:center;">I <span style="font-size:8px;opacity:.7">AUTO</span></span>
-  </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:160px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
+  </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:130px repeat(4,minmax(48px,1fr)) minmax(56px,1.4fr);gap:4px;align-items:center;margin-bottom:6px;">
     <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}">${m.name}</span>
-    <input type="number" class="ph-bulk-p" data-model="${m.name}" data-bulk-prefix="ph" data-brand="ph" value="0" step="1" style="text-align:center;padding:5px 3px;">
-    <input type="number" class="ph-bulk-s" data-model="${m.name}" data-brand="ph" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-    <input type="number" class="ph-bulk-re" data-model="${m.name}" data-brand="ph" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-    <input type="number" class="ph-bulk-proj" data-model="${m.name}" data-brand="ph" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-    <input type="number" class="ph-bulk-i" data-model="${m.name}" data-brand="ph" data-bulk-i-for="ph-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
+    <input type="number" class="ph-bulk-p" data-model="${m.name}" data-bulk-prefix="ph" data-brand="ph" value="0" step="1" style="text-align:center;padding:5px 0;">
+    <input type="number" class="ph-bulk-s" data-model="${m.name}" data-brand="ph" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+    <input type="number" class="ph-bulk-re" data-model="${m.name}" data-brand="ph" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+    <input type="number" class="ph-bulk-proj" data-model="${m.name}" data-brand="ph" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+    <input type="number" class="ph-bulk-i" data-model="${m.name}" data-brand="ph" data-bulk-i-for="ph-${m.name}" value="0" step="1" style="text-align:center;padding:5px 0;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
   </div>`).join('');
   attachBulkAutoCalc('pbWeek', phGetEntries, 'ph-bulk-p','ph-bulk-s','ph-bulk-re','ph-bulk-proj','ph-bulk-i');
   // Pre-fill I with latest known inventory
@@ -8223,20 +8256,20 @@ function renderPlocksEntry(){
   const sel=document.getElementById('plModel');
   sel.innerHTML='<option value="">Select model...</option>'+models.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
   const bf=document.getElementById('plocksBulkFields');
-  bf.innerHTML=`<div style="display:grid;grid-template-columns:180px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
+  bf.innerHTML=`<div style="display:grid;grid-template-columns:130px repeat(4,minmax(48px,1fr)) minmax(56px,1.4fr);gap:4px;align-items:center;margin-bottom:5px;padding:0 2px;">
     <span style="font-size:10px;color:var(--mac-text3);">Model</span>
     <span style="font-size:10px;color:#34c759;text-align:center;">P</span>
     <span style="font-size:10px;color:var(--mac-orange);text-align:center;">S</span>
     <span style="font-size:10px;color:var(--mac-purple);text-align:center;">RE</span>
     <span style="font-size:10px;color:var(--mac-teal);text-align:center;">Proj</span>
     <span style="font-size:10px;color:var(--mac-accent);text-align:center;">I</span>
-  </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:180px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
+  </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:130px repeat(4,minmax(48px,1fr)) minmax(56px,1.4fr);gap:4px;align-items:center;margin-bottom:6px;">
     <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}">${m.name}</span>
-    <input type="number" class="pl-bulk-p" data-model="${m.name}" data-bulk-prefix="pl" data-brand="pl" value="0" step="1" style="text-align:center;padding:5px 3px;">
-    <input type="number" class="pl-bulk-s" data-model="${m.name}" data-brand="pl" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-    <input type="number" class="pl-bulk-re" data-model="${m.name}" data-brand="pl" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-    <input type="number" class="pl-bulk-proj" data-model="${m.name}" data-brand="pl" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
-    <input type="number" class="pl-bulk-i" data-model="${m.name}" data-brand="pl" data-bulk-i-for="pl-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
+    <input type="number" class="pl-bulk-p" data-model="${m.name}" data-bulk-prefix="pl" data-brand="pl" value="0" step="1" style="text-align:center;padding:5px 0;">
+    <input type="number" class="pl-bulk-s" data-model="${m.name}" data-brand="pl" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+    <input type="number" class="pl-bulk-re" data-model="${m.name}" data-brand="pl" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+    <input type="number" class="pl-bulk-proj" data-model="${m.name}" data-brand="pl" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 0;">
+    <input type="number" class="pl-bulk-i" data-model="${m.name}" data-brand="pl" data-bulk-i-for="pl-${m.name}" value="0" step="1" style="text-align:center;padding:5px 0;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
   </div>`).join('');
   attachBulkAutoCalc('plbWeek', plGetEntries, 'pl-bulk-p','pl-bulk-s','pl-bulk-re','pl-bulk-proj','pl-bulk-i');
   // Pre-fill I with latest known inventory
