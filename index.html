@@ -2338,10 +2338,10 @@ function buildBulkFields(){
     </div>`+
     models.map(m=>`<div style="display:grid;grid-template-columns:130px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
       <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}/${m.region}">${m.name}</span>
-      <input type="number" class="bulk-p" data-model="${m.name}" data-region="${m.region}" data-bulk-prefix="sam" value="0" step="1" style="text-align:center;padding:5px 3px;" oninput="_bSam()">
-      <input type="number" class="bulk-s" data-model="${m.name}" data-brand="sam" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bSam()">
-      <input type="number" class="bulk-re" data-model="${m.name}" data-brand="sam" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bSam()">
-      <input type="number" class="bulk-proj" data-model="${m.name}" data-brand="sam" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bSam()">
+      <input type="number" class="bulk-p" data-model="${m.name}" data-region="${m.region}" data-bulk-prefix="sam" value="0" step="1" style="text-align:center;padding:5px 3px;">
+      <input type="number" class="bulk-s" data-model="${m.name}" data-brand="sam" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
+      <input type="number" class="bulk-re" data-model="${m.name}" data-brand="sam" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
+      <input type="number" class="bulk-proj" data-model="${m.name}" data-brand="sam" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
       <input type="number" class="bulk-i" data-model="${m.name}" data-brand="sam" data-bulk-i-for="sam-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
     </div>`).join('');
   attachBulkAutoCalc('bWeek', getEntries, 'bulk-p','bulk-s','bulk-re','bulk-proj','bulk-i');
@@ -5030,10 +5030,10 @@ function renderPhilipsEntry(){
     <span style="font-size:10px;color:var(--mac-accent);text-align:center;">I <span style="font-size:8px;opacity:.7">AUTO</span></span>
   </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:160px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
     <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}">${m.name}</span>
-    <input type="number" class="ph-bulk-p" data-model="${m.name}" data-bulk-prefix="ph" data-brand="ph" value="0" step="1" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
-    <input type="number" class="ph-bulk-s" data-model="${m.name}" data-brand="ph" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
-    <input type="number" class="ph-bulk-re" data-model="${m.name}" data-brand="ph" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
-    <input type="number" class="ph-bulk-proj" data-model="${m.name}" data-brand="ph" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
+    <input type="number" class="ph-bulk-p" data-model="${m.name}" data-bulk-prefix="ph" data-brand="ph" value="0" step="1" style="text-align:center;padding:5px 3px;">
+    <input type="number" class="ph-bulk-s" data-model="${m.name}" data-brand="ph" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
+    <input type="number" class="ph-bulk-re" data-model="${m.name}" data-brand="ph" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
+    <input type="number" class="ph-bulk-proj" data-model="${m.name}" data-brand="ph" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
     <input type="number" class="ph-bulk-i" data-model="${m.name}" data-brand="ph" data-bulk-i-for="ph-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
   </div>`).join('');
   attachBulkAutoCalc('pbWeek', phGetEntries, 'ph-bulk-p','ph-bulk-s','ph-bulk-re','ph-bulk-proj','ph-bulk-i');
@@ -8232,10 +8232,10 @@ function renderPlocksEntry(){
     <span style="font-size:10px;color:var(--mac-accent);text-align:center;">I</span>
   </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:180px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
     <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}">${m.name}</span>
-    <input type="number" class="pl-bulk-p" data-model="${m.name}" data-bulk-prefix="pl" data-brand="pl" value="0" step="1" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
-    <input type="number" class="pl-bulk-s" data-model="${m.name}" data-brand="pl" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
-    <input type="number" class="pl-bulk-re" data-model="${m.name}" data-brand="pl" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
-    <input type="number" class="pl-bulk-proj" data-model="${m.name}" data-brand="pl" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
+    <input type="number" class="pl-bulk-p" data-model="${m.name}" data-bulk-prefix="pl" data-brand="pl" value="0" step="1" style="text-align:center;padding:5px 3px;">
+    <input type="number" class="pl-bulk-s" data-model="${m.name}" data-brand="pl" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
+    <input type="number" class="pl-bulk-re" data-model="${m.name}" data-brand="pl" data-bulk-re value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
+    <input type="number" class="pl-bulk-proj" data-model="${m.name}" data-brand="pl" data-bulk-proj value="0" step="1" min="0" style="text-align:center;padding:5px 3px;">
     <input type="number" class="pl-bulk-i" data-model="${m.name}" data-brand="pl" data-bulk-i-for="pl-${m.name}" value="0" step="1" style="text-align:center;padding:5px 3px;background:rgba(0,122,255,0.06);border-color:#007aff;" onfocus="this._manualOverride=true;this.style.background='';this.style.borderColor='';">
   </div>`).join('');
   attachBulkAutoCalc('plbWeek', plGetEntries, 'pl-bulk-p','pl-bulk-s','pl-bulk-re','pl-bulk-proj','pl-bulk-i');
