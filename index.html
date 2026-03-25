@@ -2320,7 +2320,7 @@ function attachBulkAutoCalc(weekId, getEntriesFn, pClass, sClass, reClass, projC
 function buildBulkFields(){
   const models=getModels();
   document.getElementById('bulkFields').innerHTML=
-    `<div style="display:grid;grid-template-columns:130px repeat(5,1fr);gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
+    `<div style="display:grid;grid-template-columns:130px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
       <span style="font-size:10px;color:var(--mac-text3);">Model</span>
       <span style="font-size:10px;color:#34c759;text-align:center;">P</span>
       <span style="font-size:10px;color:var(--mac-orange);text-align:center;">S</span>
@@ -2328,7 +2328,7 @@ function buildBulkFields(){
       <span style="font-size:10px;color:var(--mac-teal);text-align:center;">Proj</span>
       <span style="font-size:10px;color:var(--mac-accent);text-align:center;">I <span style="font-size:8px;opacity:.7">AUTO</span></span>
     </div>`+
-    models.map(m=>`<div style="display:grid;grid-template-columns:130px repeat(5,1fr);gap:6px;align-items:center;margin-bottom:6px;">
+    models.map(m=>`<div style="display:grid;grid-template-columns:130px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
       <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}/${m.region}">${m.name}</span>
       <input type="number" class="bulk-p" data-model="${m.name}" data-region="${m.region}" data-bulk-prefix="sam" value="0" step="1" style="text-align:center;padding:5px 3px;" oninput="_bSam()">
       <input type="number" class="bulk-s" data-model="${m.name}" data-brand="sam" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bSam()">
@@ -5013,14 +5013,14 @@ function renderPhilipsEntry(){
   const sel=document.getElementById('pfModel');
   sel.innerHTML='<option value="">Select model...</option>'+models.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
   const bf=document.getElementById('philipsBulkFields');
-  bf.innerHTML=`<div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
+  bf.innerHTML=`<div style="display:grid;grid-template-columns:160px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
     <span style="font-size:10px;color:var(--mac-text3);">Model</span>
     <span style="font-size:10px;color:#34c759;text-align:center;">P</span>
     <span style="font-size:10px;color:var(--mac-orange);text-align:center;">S</span>
     <span style="font-size:10px;color:var(--mac-purple);text-align:center;">RE</span>
     <span style="font-size:10px;color:var(--mac-teal);text-align:center;">Proj</span>
     <span style="font-size:10px;color:var(--mac-accent);text-align:center;">I <span style="font-size:8px;opacity:.7">AUTO</span></span>
-  </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:6px;align-items:center;margin-bottom:6px;">
+  </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:160px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
     <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}">${m.name}</span>
     <input type="number" class="ph-bulk-p" data-model="${m.name}" data-bulk-prefix="ph" data-brand="ph" value="0" step="1" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
     <input type="number" class="ph-bulk-s" data-model="${m.name}" data-brand="ph" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPh()">
@@ -8215,14 +8215,14 @@ function renderPlocksEntry(){
   const sel=document.getElementById('plModel');
   sel.innerHTML='<option value="">Select model...</option>'+models.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
   const bf=document.getElementById('plocksBulkFields');
-  bf.innerHTML=`<div style="display:grid;grid-template-columns:180px repeat(5,1fr);gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
+  bf.innerHTML=`<div style="display:grid;grid-template-columns:180px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
     <span style="font-size:10px;color:var(--mac-text3);">Model</span>
     <span style="font-size:10px;color:#34c759;text-align:center;">P</span>
     <span style="font-size:10px;color:var(--mac-orange);text-align:center;">S</span>
     <span style="font-size:10px;color:var(--mac-purple);text-align:center;">RE</span>
     <span style="font-size:10px;color:var(--mac-teal);text-align:center;">Proj</span>
     <span style="font-size:10px;color:var(--mac-accent);text-align:center;">I</span>
-  </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:180px repeat(5,1fr);gap:6px;align-items:center;margin-bottom:6px;">
+  </div>`+models.map(m=>`<div style="display:grid;grid-template-columns:180px repeat(4,1fr) 1.7fr;gap:6px;align-items:center;margin-bottom:6px;">
     <span style="font-size:11px;color:var(--mac-text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${m.name}">${m.name}</span>
     <input type="number" class="pl-bulk-p" data-model="${m.name}" data-bulk-prefix="pl" data-brand="pl" value="0" step="1" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
     <input type="number" class="pl-bulk-s" data-model="${m.name}" data-brand="pl" data-bulk-s value="0" step="1" min="0" style="text-align:center;padding:5px 3px;" oninput="_bPl()">
