@@ -2679,7 +2679,7 @@ function renderHistoryView(){
 
   const html=`<table class="raw-table">
     <thead>
-      <tr class="row-month"><th class="model-head" rowspan="3">Model</th>${monthCells}<th colspan="3" class="row-month" style="color:var(--mac-text3);">Summary</th></tr>
+      <tr class="row-month"><th class="model-head" rowspan="3" style="position:sticky;left:0;z-index:4;background:var(--mac-surface2);box-shadow:2px 0 4px rgba(0,0,0,0.06);">Model</th>${monthCells}<th colspan="3" class="row-month" style="color:var(--mac-text3);">Summary</th></tr>
       <tr class="row-week">${weekCells}<th colspan="3" class="row-week"></th></tr>
       <tr class="row-col">${colCells}</tr>
     </thead>
@@ -5342,7 +5342,7 @@ function renderPhilipsHistory(){
   const grandAvg=String(Math.round(grandS/8));
   document.getElementById('philipsRawTableContainer').innerHTML=`<table class="raw-table">
     <thead>
-      <tr class="row-month"><th class="model-head" rowspan="3">Model</th>${monthCells}<th colspan="3" class="row-month" style="color:var(--mac-text3);">Summary</th></tr>
+      <tr class="row-month"><th class="model-head" rowspan="3" style="position:sticky;left:0;z-index:4;background:var(--mac-surface2);box-shadow:2px 0 4px rgba(0,0,0,0.06);">Model</th>${monthCells}<th colspan="3" class="row-month" style="color:var(--mac-text3);">Summary</th></tr>
       <tr class="row-week">${weekCells}<th colspan="3" class="row-week"></th></tr>
       <tr class="row-col">${colCells}</tr>
     </thead>
@@ -8508,7 +8508,7 @@ function renderPlocksHistory(){
   const grandAvg=String(Math.round(grandS/8));
   document.getElementById('plocksRawTableContainer').innerHTML=`<table class="raw-table">
     <thead>
-      <tr class="row-month"><th class="model-head" rowspan="3">Model</th>${monthCells}<th colspan="3" class="row-month" style="color:var(--mac-text3);">Summary</th></tr>
+      <tr class="row-month"><th class="model-head" rowspan="3" style="position:sticky;left:0;z-index:4;background:var(--mac-surface2);box-shadow:2px 0 4px rgba(0,0,0,0.06);">Model</th>${monthCells}<th colspan="3" class="row-month" style="color:var(--mac-text3);">Summary</th></tr>
       <tr class="row-week">${weekCells}<th colspan="3" class="row-week"></th></tr>
       <tr class="row-col">${colCells}</tr>
     </thead>
