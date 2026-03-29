@@ -2418,7 +2418,7 @@ function renderRecentHistory(){
 
   const monthSpans=[];
   weeks.forEach(wk=>{
-    const mo=(weekMeta[wk]?.month)||'';
+    const mo=((weekMeta[wk]?.month)||'').toUpperCase().trim();
     if(!monthSpans.length||monthSpans[monthSpans.length-1].month!==mo) monthSpans.push({month:mo,count:0});
     monthSpans[monthSpans.length-1].count++;
   });
@@ -2607,7 +2607,7 @@ function renderHistoryView(){
   // Build month spans
   const monthSpans=[];
   visWeeks.forEach(wk=>{
-    const mo=(wkMeta[wk]?.month)||'';
+    const mo=((wkMeta[wk]?.month)||'').toUpperCase().trim();
     if(!monthSpans.length||monthSpans[monthSpans.length-1].month!==mo)
       monthSpans.push({month:mo,count:0});
     monthSpans[monthSpans.length-1].count++;
@@ -5155,7 +5155,7 @@ function phRenderRecentHistory(){
 
   const monthSpans=[];
   weeks.forEach(wk=>{
-    const mo=(weekMeta[wk]?.month)||'';
+    const mo=((weekMeta[wk]?.month)||'').toUpperCase().trim();
     if(!monthSpans.length||monthSpans[monthSpans.length-1].month!==mo) monthSpans.push({month:mo,count:0});
     monthSpans[monthSpans.length-1].count++;
   });
@@ -5291,7 +5291,7 @@ function renderPhilipsHistory(){
   const wkMeta={};entries.forEach(e=>{if(!wkMeta[e.week])wkMeta[e.week]={dateRange:e.dateRange,month:e.month};});
   const monthSpans=[];
   visWeeks.forEach(wk=>{
-    const mo=(wkMeta[wk]?.month)||'';
+    const mo=((wkMeta[wk]?.month)||'').toUpperCase().trim();
     if(!monthSpans.length||monthSpans[monthSpans.length-1].month!==mo) monthSpans.push({month:mo,count:0});
     monthSpans[monthSpans.length-1].count++;
   });
@@ -8349,7 +8349,7 @@ function plRenderRecentHistory(){
   const weekMeta={};entries.forEach(e=>{if(!weekMeta[e.week])weekMeta[e.week]={dateRange:e.dateRange,month:e.month};});
   const monthSpans=[];
   weeks.forEach(wk=>{
-    const mo=(weekMeta[wk]?.month)||'';
+    const mo=((weekMeta[wk]?.month)||'').toUpperCase().trim();
     if(!monthSpans.length||monthSpans[monthSpans.length-1].month!==mo)monthSpans.push({month:mo,count:0});
     monthSpans[monthSpans.length-1].count++;
   });
@@ -8469,7 +8469,7 @@ function renderPlocksHistory(){
   const wkMeta={};entries.forEach(e=>{if(!wkMeta[e.week])wkMeta[e.week]={dateRange:e.dateRange,month:e.month};});
   const monthSpans=[];
   visWeeks.forEach(wk=>{
-    const mo=(wkMeta[wk]?.month)||'';
+    const mo=((wkMeta[wk]?.month)||'').toUpperCase().trim();
     if(!monthSpans.length||monthSpans[monthSpans.length-1].month!==mo)monthSpans.push({month:mo,count:0});
     monthSpans[monthSpans.length-1].count++;
   });
