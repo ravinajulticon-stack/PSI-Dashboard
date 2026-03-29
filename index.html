@@ -2415,6 +2415,15 @@ function renderRecentHistory(){
   // Build header: Model | W11 P S RE Proj I | W10 P S RE Proj I | ...
   const weekMeta={};
   entries.forEach(e=>{if(!weekMeta[e.week])weekMeta[e.week]={dateRange:e.dateRange,month:e.month};});
+  // Fill missing months from adjacent weeks
+  const _sortedWks = [...new Set(entries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
+  _sortedWks.forEach((wk,i)=>{
+    if(!weekMeta[wk]?.month){
+      const prev = _sortedWks.slice(0,i).reverse().find(w=>weekMeta[w]?.month);
+      const next = _sortedWks.slice(i+1).find(w=>weekMeta[w]?.month);
+      if(weekMeta[wk]) weekMeta[wk].month = (prev&&weekMeta[prev]?.month)||(next&&weekMeta[next]?.month)||'';
+    }
+  });
 
   const monthSpans=[];
   weeks.forEach(wk=>{
@@ -5152,6 +5161,15 @@ function phRenderRecentHistory(){
   const models=phGetModels();
   const weekMeta={};
   entries.forEach(e=>{if(!weekMeta[e.week])weekMeta[e.week]={dateRange:e.dateRange,month:e.month};});
+  // Fill missing months from adjacent weeks
+  const _sortedWks = [...new Set(entries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
+  _sortedWks.forEach((wk,i)=>{
+    if(!weekMeta[wk]?.month){
+      const prev = _sortedWks.slice(0,i).reverse().find(w=>weekMeta[w]?.month);
+      const next = _sortedWks.slice(i+1).find(w=>weekMeta[w]?.month);
+      if(weekMeta[wk]) weekMeta[wk].month = (prev&&weekMeta[prev]?.month)||(next&&weekMeta[next]?.month)||'';
+    }
+  });
 
   const monthSpans=[];
   weeks.forEach(wk=>{
