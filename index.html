@@ -2611,6 +2611,15 @@ function renderHistoryView(){
   // Build week→dateRange map (use first entry found)
   const wkMeta={};
   entries.forEach(e=>{if(!wkMeta[e.week])wkMeta[e.week]={dateRange:e.dateRange,month:e.month};});
+  // Fill missing months from adjacent weeks
+  const _allWksSorted = [...new Set(entries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
+  _allWksSorted.forEach((wk,i)=>{
+    if(!wkMeta[wk]?.month){
+      const prev = _allWksSorted.slice(0,i).reverse().find(w=>wkMeta[w]?.month);
+      const next = _allWksSorted.slice(i+1).find(w=>wkMeta[w]?.month);
+      if(wkMeta[wk]) wkMeta[wk].month = (prev&&wkMeta[prev]?.month)||(next&&wkMeta[next]?.month)||'';
+    }
+  });
 
   // Group months: find month for each week
   // Build month spans
@@ -5307,6 +5316,15 @@ function renderPhilipsHistory(){
   }).join('');
   const visWeeks=phState.historyWeekFilter.size===0?allWeeks:allWeeks.filter(w=>phState.historyWeekFilter.has(w));
   const wkMeta={};entries.forEach(e=>{if(!wkMeta[e.week])wkMeta[e.week]={dateRange:e.dateRange,month:e.month};});
+  // Fill missing months from adjacent weeks
+  const _allWksSorted = [...new Set(entries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
+  _allWksSorted.forEach((wk,i)=>{
+    if(!wkMeta[wk]?.month){
+      const prev = _allWksSorted.slice(0,i).reverse().find(w=>wkMeta[w]?.month);
+      const next = _allWksSorted.slice(i+1).find(w=>wkMeta[w]?.month);
+      if(wkMeta[wk]) wkMeta[wk].month = (prev&&wkMeta[prev]?.month)||(next&&wkMeta[next]?.month)||'';
+    }
+  });
   const monthSpans=[];
   visWeeks.forEach(wk=>{
     const mo=((wkMeta[wk]?.month)||'').toUpperCase().trim();
@@ -8365,6 +8383,15 @@ function plRenderRecentHistory(){
   const weeks=[...new Set(entries.map(e=>e.week))].sort((a,b)=>parseInt(b.replace('W',''))-parseInt(a.replace('W','')));
   const models=plGetModels();
   const weekMeta={};entries.forEach(e=>{if(!weekMeta[e.week])weekMeta[e.week]={dateRange:e.dateRange,month:e.month};});
+  // Fill missing months from adjacent weeks
+  const _allWksSortedPl = [...new Set(entries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
+  _allWksSortedPl.forEach((wk,i)=>{
+    if(!weekMeta[wk]?.month){
+      const prev = _allWksSortedPl.slice(0,i).reverse().find(w=>weekMeta[w]?.month);
+      const next = _allWksSortedPl.slice(i+1).find(w=>weekMeta[w]?.month);
+      if(weekMeta[wk]) weekMeta[wk].month = (prev&&weekMeta[prev]?.month)||(next&&weekMeta[next]?.month)||'';
+    }
+  });
   const monthSpans=[];
   weeks.forEach(wk=>{
     const mo=((weekMeta[wk]?.month)||'').toUpperCase().trim();
@@ -8485,6 +8512,15 @@ function renderPlocksHistory(){
   }).join('');
   const visWeeks=plState.historyWeekFilter.size===0?allWeeks:allWeeks.filter(w=>plState.historyWeekFilter.has(w));
   const wkMeta={};entries.forEach(e=>{if(!wkMeta[e.week])wkMeta[e.week]={dateRange:e.dateRange,month:e.month};});
+  // Fill missing months from adjacent weeks
+  const _allWksSorted = [...new Set(entries.map(e=>e.week))].sort((a,b)=>parseInt(a.replace('W',''))-parseInt(b.replace('W','')));
+  _allWksSorted.forEach((wk,i)=>{
+    if(!wkMeta[wk]?.month){
+      const prev = _allWksSorted.slice(0,i).reverse().find(w=>wkMeta[w]?.month);
+      const next = _allWksSorted.slice(i+1).find(w=>wkMeta[w]?.month);
+      if(wkMeta[wk]) wkMeta[wk].month = (prev&&wkMeta[prev]?.month)||(next&&wkMeta[next]?.month)||'';
+    }
+  });
   const monthSpans=[];
   visWeeks.forEach(wk=>{
     const mo=((wkMeta[wk]?.month)||'').toUpperCase().trim();
