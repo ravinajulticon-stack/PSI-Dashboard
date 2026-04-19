@@ -1815,7 +1815,7 @@ window.addEventListener('load', () => {
         const unsaved = mergedArr.filter(r => !r._id);
         if(unsaved.length)
           await supaInsert(tbl, unsaved.map(e=>mapToDB(e,region)));
-        return true;
+        return true; // always re-render when DB has data
       };
 
       showSyncStatus('Syncing...','info');
@@ -1825,12 +1825,10 @@ window.addEventListener('load', () => {
         mergeAndDedup('plocks_entries','plocks_psi_v2_entries','AU'),
       ]);
       showSyncStatus('Synced ✓','success');
-      // Re-render with merged data if anything changed
-      if(r1||r2||r3) {
-        if(typeof renderDashboard==='function') renderDashboard();
-        if(typeof phRenderDashboard==='function') phRenderDashboard();
-        if(typeof plRenderDashboard==='function') plRenderDashboard();
-      }
+      // Always re-render after sync to show latest data
+      if(typeof renderDashboard==='function') renderDashboard();
+      if(typeof phRenderDashboard==='function') phRenderDashboard();
+      if(typeof plRenderDashboard==='function') plRenderDashboard();
     } catch(e) {
       showSyncStatus('Offline — local data','warning');
     }
