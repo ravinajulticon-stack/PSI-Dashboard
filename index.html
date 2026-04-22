@@ -1472,29 +1472,6 @@ input.pl-bulk-p, input.pl-bulk-s, input.pl-bulk-re, input.pl-bulk-proj, input.pl
     <div class="metrics" id="plocksMetricsGrid"></div>
     <div class="alerts-section" id="plocksAlertsSection"></div>
 
-    <!-- Forecast -->
-    <div class="forecast-section" id="plocksForecastSection">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Weekly Forecast</div>
-          <div style="font-size:11px;color:var(--mac-text3);margin-top:2px;">Projected inventory · next 8 weeks · 60-day lead</div>
-        </div>
-        <div class="forecast-model-select">
-          <span style="font-size:11px;color:var(--mac-text3);">Model</span>
-          <select id="plocksForecastModelSel" style="font-size:11px;padding:4px 8px;border-radius:6px;width:auto;">
-            <option value="__all__">All Models (Total)</option>
-          </select>
-          <div class="tab-btns">
-            <button class="tab-btn active" data-plvfw="cards">Cards</button>
-            <button class="tab-btn" data-plvfw="table">Table</button>
-          </div>
-        </div>
-      </div>
-      <div id="plocksForecastCards" class="forecast-grid"></div>
-      <div id="plocksForecastTable" class="forecast-table-wrap" style="display:none;"></div>
-      <div style="position:relative;width:100%;height:180px;margin-top:14px;"><canvas id="plocksForecastChart"></canvas></div>
-    </div>
-
     <div class="charts-row">
       <div class="chart-card">
         <div class="card-header"><div class="card-title">Inventory trend</div>
@@ -1516,6 +1493,29 @@ input.pl-bulk-p, input.pl-bulk-s, input.pl-bulk-re, input.pl-bulk-proj, input.pl
         <div class="chart-legend" id="plocksSellLegend"></div>
         <div style="position:relative;width:100%;height:200px;"><canvas id="plocksSellChart"></canvas></div>
       </div>
+    </div>
+
+    <!-- Forecast -->
+    <div class="forecast-section" id="plocksForecastSection">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Weekly Forecast</div>
+          <div style="font-size:11px;color:var(--mac-text3);margin-top:2px;">Projected inventory · next 8 weeks · 60-day lead</div>
+        </div>
+        <div class="forecast-model-select">
+          <span style="font-size:11px;color:var(--mac-text3);">Model</span>
+          <select id="plocksForecastModelSel" style="font-size:11px;padding:4px 8px;border-radius:6px;width:auto;">
+            <option value="__all__">All Models (Total)</option>
+          </select>
+          <div class="tab-btns">
+            <button class="tab-btn active" data-plvfw="cards">Cards</button>
+            <button class="tab-btn" data-plvfw="table">Table</button>
+          </div>
+        </div>
+      </div>
+      <div id="plocksForecastCards" class="forecast-grid"></div>
+      <div id="plocksForecastTable" class="forecast-table-wrap" style="display:none;"></div>
+      <div style="position:relative;width:100%;height:180px;margin-top:14px;"><canvas id="plocksForecastChart"></canvas></div>
     </div>
 
     <div class="table-section">
