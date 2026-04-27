@@ -458,7 +458,7 @@ body {
 .alert-card.warn .alert-badge { color: var(--mac-orange); background: var(--mac-orange-bg); }
 
 /* ── FILTER BAR ── */
-.filter-bar {
+.filter-bar { display:flex; align-items:center; flex-wrap:wrap;
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   margin-bottom: 14px; padding: 8px 12px;
   background: var(--mac-surface);
@@ -1028,6 +1028,7 @@ input.pl-bulk-p, input.pl-bulk-s, input.pl-bulk-re, input.pl-bulk-proj, input.pl
       <span class="search-icon">&#x2315;</span>
       <input type="text" class="search-input" id="searchInput" placeholder="Search model...">
     </div>
+    <button onclick="forceSync()" style="margin-left:8px;background:#007aff;color:#fff;border:none;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">↻ Refresh</button>
   </div>
 
   <div class="metrics" id="metricsGrid"></div>
@@ -1265,6 +1266,7 @@ input.pl-bulk-p, input.pl-bulk-s, input.pl-bulk-re, input.pl-bulk-proj, input.pl
         <span class="search-icon">&#x2315;</span>
         <input type="text" class="search-input" id="philipsSearchInput" placeholder="Search model...">
       </div>
+      <button onclick="forceSync()" style="margin-left:8px;background:#f39c12;color:#fff;border:none;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">↻ Refresh</button>
     </div>
 
     <div class="metrics" id="philipsMetricsGrid"></div>
@@ -1467,6 +1469,7 @@ input.pl-bulk-p, input.pl-bulk-s, input.pl-bulk-re, input.pl-bulk-proj, input.pl
         <span class="search-icon">&#x2315;</span>
         <input type="text" class="search-input" id="plocksSearchInput" placeholder="Search model...">
       </div>
+      <button onclick="forceSync()" style="margin-left:8px;background:#9b59b6;color:#fff;border:none;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">↻ Refresh</button>
     </div>
 
     <div class="metrics" id="plocksMetricsGrid"></div>
@@ -1782,6 +1785,23 @@ async function supaCount(table) {
 }
 
 // On page load — pull latest from Supabase into localStorage
+function forceSync() {
+  showSyncStatus('Syncing...','info');
+  (async()=>{
+    try {
+      const get=async t=>{
+        const r=await fetch(`${SUPA_URL}/rest/v1/${t}?select=*&order=created_at.asc&limit=10000`,{headers:SH});
+        return r.ok?await r.json():null;
+      };
+      const [s,p,l]=await Promise.all([get('samsung_entries'),get('philips_entries'),get('plocks_entries')]);
+      if(s){localStorage.setItem('psi_v2_entries',JSON.stringify(s.map(mapFromDB)));renderDashboard();renderRecentHistory();}
+      if(p){localStorage.setItem('philips_psi_v2_entries',JSON.stringify(p.map(mapFromDB)));phRenderDashboard();phRenderRecentHistory();}
+      if(l){localStorage.setItem('plocks_psi_v2_entries',JSON.stringify(l.map(mapFromDB)));plRenderDashboard();plRenderRecentHistory();}
+      showSyncStatus('Synced ✓','success');
+    } catch(e){ showSyncStatus('Sync failed','warning'); }
+  })();
+}
+
 function showSyncStatus(msg, type='success') { showToast(msg, type); }
 
 window.addEventListener('load', () => {
