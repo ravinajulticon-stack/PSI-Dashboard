@@ -1805,10 +1805,25 @@ window.addEventListener('load', () => {
           }
           return false; // no change to local
         }
-        // Merge: DB base + local override
+        // Merge: DB base + local override for data fields only
         const merged = {};
         dbRows.forEach(r => { merged[r.model+'|'+r.week] = mapFromDB(r); });
-        local.forEach(r => { merged[r.model+'|'+r.week] = r; }); // local wins
+        local.forEach(r => {
+          const key = r.model+'|'+r.week;
+          if(merged[key]) {
+            // DB wins for metadata, local wins for data values only if no _id (unsaved)
+            merged[key] = {
+              ...merged[key],
+              // Always use DB metadata (dateRange, month) 
+              dateRange: merged[key].dateRange || r.dateRange,
+              month: merged[key].month || r.month,
+              // Local wins for data only if entry has no _id (never saved to DB)
+              ...(r._id ? {} : {p:r.p, s:r.s, re:r.re, proj:r.proj, i:r.i})
+            };
+          } else {
+            merged[key] = r; // local-only entry
+          }
+        });
         const mergedArr = Object.values(merged);
         localStorage.setItem(localKey, JSON.stringify(mergedArr));
         // Push any local-only (no _id) entries to Supabase
