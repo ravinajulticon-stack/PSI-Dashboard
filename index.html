@@ -1804,6 +1804,23 @@ function forceSync() {
 
 function showSyncStatus(msg, type='success') { showToast(msg, type); }
 
+// ── Keep-alive: ping Supabase every 4 days to prevent free-tier pausing ──
+(function keepAlive() {
+  const KEY = 'psi_last_ping';
+  const FOUR_DAYS = 4 * 24 * 60 * 60 * 1000;
+  const last = parseInt(localStorage.getItem(KEY)||'0');
+  if(Date.now() - last > FOUR_DAYS) {
+    const H = {'apikey': SB_KEY || 'sb_publishable_j6MIouzm484dXuHqH76JNw_39ol8cBx',
+               'Authorization': 'Bearer ' + (SB_KEY || 'sb_publishable_j6MIouzm484dXuHqH76JNw_39ol8cBx')};
+    Promise.all([
+      fetch('https://tfpgywqmwnjesesfcmcg.supabase.co/rest/v1/samsung_entries?select=id&limit=1', {headers:H}),
+      fetch('https://tfpgywqmwnjesesfcmcg.supabase.co/rest/v1/philips_entries?select=id&limit=1', {headers:H}),
+      fetch('https://tfpgywqmwnjesesfcmcg.supabase.co/rest/v1/plocks_entries?select=id&limit=1', {headers:H})
+    ]).then(() => localStorage.setItem(KEY, Date.now()))
+      .catch(() => {});
+  }
+})();
+
 window.addEventListener('load', () => {
   // STEP 1: Render immediately from localStorage (instant, no waiting)
   if(typeof renderDashboard==='function') renderDashboard();
