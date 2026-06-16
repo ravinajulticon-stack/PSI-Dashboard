@@ -2741,7 +2741,16 @@ function renderHistoryView(){
            <td class="val-i" style="font-weight:600">${tI}</td>`;
   }).join('');
   const last8W=allWeeks.slice(-8);
-  const grandS=entries.filter(e=>last8W.includes(e.week)).reduce((a,e)=>a+e.s,0);
+  const grandS=(()=>{
+    let tot=0;
+    models.forEach(md=>{
+      last8W.forEach(wk=>{
+        const me=entries.filter(e=>e.model===md.name&&e.week===wk);
+        if(me.length) tot+=me[me.length-1].s;
+      });
+    });
+    return tot;
+  })();
   const grandAvg=String(Math.round(grandS/8));
 
   const html=`<table class="raw-table">
@@ -5423,7 +5432,16 @@ function renderPhilipsHistory(){
            <td class="val-i" style="font-weight:600">${tI}</td>`;
   }).join('');
   const last8W=allWeeks.slice(-8);
-  const grandS=entries.filter(e=>last8W.includes(e.week)).reduce((a,e)=>a+e.s,0);
+  const grandS=(()=>{
+    let tot=0;
+    models.forEach(md=>{
+      last8W.forEach(wk=>{
+        const me=entries.filter(e=>e.model===md.name&&e.week===wk);
+        if(me.length) tot+=me[me.length-1].s;
+      });
+    });
+    return tot;
+  })();
   const grandAvg=String(Math.round(grandS/8));
   document.getElementById('philipsRawTableContainer').innerHTML=`<table class="raw-table">
     <thead>
@@ -8607,7 +8625,17 @@ function renderPlocksHistory(){
       <td class="val-summary" style="color:${rwColor};font-weight:600">${runway!==null?runway+' wks':'—'}</td></tr>`;
   }).join('');
   const last8W=allWeeks.slice(-8);
-  const grandS=entries.filter(e=>last8W.includes(e.week)).reduce((a,e)=>a+e.s,0);
+  // Deduplicate by model+week (use last entry) before summing
+  const grandS=(()=>{
+    let tot=0;
+    models.forEach(md=>{
+      last8W.forEach(wk=>{
+        const me=entries.filter(e=>e.model===md.name&&e.week===wk);
+        if(me.length) tot+=me[me.length-1].s;
+      });
+    });
+    return tot;
+  })();
   const grandAvg=String(Math.round(grandS/8));
   document.getElementById('plocksRawTableContainer').innerHTML=`<table class="raw-table">
     <thead>
