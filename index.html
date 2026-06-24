@@ -1885,7 +1885,7 @@ window.addEventListener('load', () => {
       showSyncStatus('Offline — local data','warning');
     }
   }, 1000); // delay 1s so UI renders first
-  await loadIncomingFromSupabase();
+  loadIncomingFromSupabase();
   keepAlivePing(); // ping Supabase to prevent free-tier pausing
 }); // end window.addEventListener('load')
 
