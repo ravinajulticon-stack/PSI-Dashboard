@@ -1805,6 +1805,7 @@ function forceSync() {
 
 function saveIncomingToSupabase(brand){const keyMap={samsung:'samsung_incoming_v1',philips:'philips_incoming_v1',plocks:'plocks_incoming_v1'};const data=JSON.parse(localStorage.getItem(keyMap[brand])||'{}');fetch(`${SUPA_URL}/rest/v1/incoming_stock?brand=eq.${brand}`,{method:'PATCH',headers:{...SH,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({data,updated_at:new Date().toISOString()})}).catch(()=>{});}
 async function loadIncomingFromSupabase(){try{const r=await fetch(`${SUPA_URL}/rest/v1/incoming_stock?select=brand,data`,{headers:SH});const rows=await r.json();const keyMap={samsung:'samsung_incoming_v1',philips:'philips_incoming_v1',plocks:'plocks_incoming_v1'};rows.forEach(({brand,data})=>{localStorage.setItem(keyMap[brand],JSON.stringify(data||{}));});}catch(e){}}
+function showSyncStatus(msg, type='success') { showToast(msg, type); }
 
 // ── Keep-alive: ping Supabase every 4 days to prevent free-tier pausing ──
 function keepAlivePing() {
