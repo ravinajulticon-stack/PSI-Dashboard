@@ -4,12 +4,12 @@
 // Injects its own CSS + <select> dropdowns, then wraps the
 // existing chart-builder and render functions rather than
 // editing them directly.
-// ═════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 (function () {
   // ── CSS ──
   const style = document.createElement('style');
   style.textContent = `
-.week-range-select { font-family: var(--font); font-size: 11px; font-weight: 500; background: var(--mac-surface2); border: 1px solid var(--mac-border2); color: var(--mac-text2); padding: 3px 8px; border-radius: 20px; outline: none; cursor: pointer; }
+.week-range-select { display: inline-block; width: auto; font-family: var(--font); font-size: 11px; font-weight: 500; background: var(--mac-surface2); border: 1px solid var(--mac-border2); color: var(--mac-text2); padding: 3px 8px; border-radius: 20px; outline: none; cursor: pointer; }
 .week-range-select:focus { border-color: var(--mac-accent); }
 .week-range-sep { font-size: 11px; color: var(--mac-text3); }
 `;
