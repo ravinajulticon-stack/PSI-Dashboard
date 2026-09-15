@@ -10,6 +10,23 @@
 // hardcoded region.
 // ══════════════════════════════════════════════════════════
 (function () {
+  // Pre-existing bug fix: several places in the original code call
+  // phRenderDashboard()/plRenderDashboard() directly (unguarded, no
+  // typeof check) but those names were never actually defined — the
+  // real functions are renderPhilipsDashboard()/renderPlocksDashboard().
+  // Every one of those call sites has been throwing a ReferenceError
+  // silently (including right after every single Philips/Plocks entry
+  // save, which is what caused this region fix's own post-save
+  // correction to never run — the exception escaped before reaching
+  // it). Defining these as aliases fixes every call site at once,
+  // without editing index.html.
+  if (typeof window.phRenderDashboard !== 'function' && typeof renderPhilipsDashboard === 'function') {
+    window.phRenderDashboard = renderPhilipsDashboard;
+  }
+  if (typeof window.plRenderDashboard !== 'function' && typeof renderPlocksDashboard === 'function') {
+    window.plRenderDashboard = renderPlocksDashboard;
+  }
+
   function reconcilePhilipsRegion() {
     if (typeof phGetEntries !== 'function' || typeof phGetModels !== 'function') return false;
     const entries = phGetEntries();
