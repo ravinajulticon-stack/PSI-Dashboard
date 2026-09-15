@@ -107,6 +107,11 @@
   wrapIfFunction('renderPhilipsHistory', orig => withActiveModelsOnly('phGetModels', orig));
   wrapIfFunction('renderPlocksHistory', orig => withActiveModelsOnly('plGetModels', orig));
 
+  // Weekly Entry's "Recent Entries" panel — also reads getModels() directly
+  wrapIfFunction('renderRecentHistory', orig => withActiveModelsOnly('getModels', orig));
+  wrapIfFunction('phRenderRecentHistory', orig => withActiveModelsOnly('phGetModels', orig));
+  wrapIfFunction('plRenderRecentHistory', orig => withActiveModelsOnly('plGetModels', orig));
+
   // Overview (charts, table, alerts, metrics) + Weekly Forecast (it reuses
   // the same computed array) — filter archived out of the computed output.
   function wrapComputeFn(name) {
@@ -132,17 +137,20 @@
       getModelsFn: () => getModels(), saveModelsFn: m => saveModels(m),
       refresh: () => { if (typeof renderDashboard === 'function') renderDashboard();
                         if (typeof renderEntryView === 'function') renderEntryView();
-                        if (typeof renderHistoryView === 'function') renderHistoryView(); } },
+                        if (typeof renderHistoryView === 'function') renderHistoryView();
+                        if (typeof renderRecentHistory === 'function') renderRecentHistory(); } },
     { key: 'philips', label: 'Philips Safes', searchId: 'philipsSearchInput',
       getModelsFn: () => phGetModels(), saveModelsFn: m => phSaveModels(m),
       refresh: () => { if (typeof renderPhilipsDashboard === 'function') renderPhilipsDashboard();
                         if (typeof renderPhilipsEntry === 'function') renderPhilipsEntry();
-                        if (typeof renderPhilipsHistory === 'function') renderPhilipsHistory(); } },
+                        if (typeof renderPhilipsHistory === 'function') renderPhilipsHistory();
+                        if (typeof phRenderRecentHistory === 'function') phRenderRecentHistory(); } },
     { key: 'plocks', label: 'Philips Locks', searchId: 'plocksSearchInput',
       getModelsFn: () => plGetModels(), saveModelsFn: m => plSaveModels(m),
       refresh: () => { if (typeof renderPlocksDashboard === 'function') renderPlocksDashboard();
                         if (typeof renderPlocksEntry === 'function') renderPlocksEntry();
-                        if (typeof renderPlocksHistory === 'function') renderPlocksHistory(); } }
+                        if (typeof renderPlocksHistory === 'function') renderPlocksHistory();
+                        if (typeof plRenderRecentHistory === 'function') plRenderRecentHistory(); } }
   ];
 
   function buildModalShell(brand) {
