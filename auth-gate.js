@@ -39,9 +39,9 @@
 #psiGate .msg { font-family: var(--font); font-size: 12px; margin-top: 12px; padding: 8px 10px; border-radius: 8px; display: none; }
 #psiGate .msg.error { display: block; background: var(--mac-red-bg); color: var(--mac-red); }
 #psiGate .msg.ok { display: block; background: var(--mac-green-bg); color: var(--mac-green); }
-#psiSignOutBtn { position: fixed; top: 10px; right: 14px; z-index: 9000; font-family: var(--font); font-size: 11px;
+#psiSignOutBtn { font-family: var(--font); font-size: 11px;
   font-weight: 600; padding: 5px 12px; border-radius: 20px; cursor: pointer; border: 1px solid var(--mac-border2);
-  background: var(--mac-surface2); color: var(--mac-text2); }
+  background: var(--mac-surface2); color: var(--mac-text2); margin-right: 8px; }
 `;
   document.head.appendChild(style);
 
@@ -70,7 +70,17 @@
       btn.id = 'psiSignOutBtn';
       btn.textContent = 'Sign out';
       btn.addEventListener('click', signOut);
-      document.body.appendChild(btn);
+      const brandRight = document.querySelector('.brand-right');
+      if (brandRight) {
+        brandRight.insertBefore(btn, brandRight.firstChild);
+      } else {
+        // Fallback if the header markup ever changes shape.
+        btn.style.position = 'fixed';
+        btn.style.top = '58px';
+        btn.style.right = '14px';
+        btn.style.zIndex = '9000';
+        document.body.appendChild(btn);
+      }
     }
   }
 
