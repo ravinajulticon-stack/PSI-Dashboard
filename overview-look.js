@@ -5,7 +5,10 @@
 //  - Page: wider (up to 1680 px) with roomier padding.
 //  - Top bar: "Inventory Forecast" app title, brand tabs with a coloured underline, the signed-in user's initials.
 //  - Tabs bar: Overview / Weekly Entry / Full History / Forecast as pills; the active one filled in the brand colour.
-//  - Overview: larger title, larger card text, 12 px rounded cards, bigger search box and buttons, larger table text.
+//  - Every tab (not just Overview): larger section titles, 12 px rounded cards, larger table and form text.
+//    Weekly Entry: bigger labels, inputs and Recent Entries text. Full History: bigger table text. Forecast:
+//    rounded cards, 16 px card titles, bigger table text.
+//  - Overview: larger card text, bigger search box and buttons, larger table text.
 //  - Model Summary: Filter as a segmented control and Sort as a "Sort: ..." dropdown (with a reverse button) on the
 //    title row; the original sort buttons stay in the page (hidden) and do the actual sorting.
 //  - Inventory Trend: the Models list moves to the right of the chart; it still controls both charts (click to hide /
@@ -32,8 +35,8 @@
   .sub-toolbar .seg-control { background: none; border: 0; box-shadow: none; padding: 0; gap: 8px; }
   .sub-toolbar .seg-control .seg-btn { border: 0; box-shadow: none; border-radius: 999px; padding: 6px 16px; font-size: 12.5px; font-weight: 500; background: #eef1f5; color: var(--mac-text); }
   .sub-toolbar .seg-control .seg-btn.active { background: var(--rd-brand, var(--mac-accent)); color: #fff; }
-  .rd-head .section-title { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
-  .rd-head .section-sub { font-size: 13px; margin-top: 2px; }
+  .rd-head .section-title, .rd-look .section-header .section-title { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  .rd-head .section-sub, .rd-look .section-header .section-sub { font-size: 13px; margin-top: 2px; }
   .rd-head-tools input { height: 36px; min-width: 260px; box-sizing: border-box; border-radius: 8px; font-size: 13px; padding-left: 34px !important; background-repeat: no-repeat; background-position: 11px center; background-size: 15px 15px; }
   .rd-head-tools button { height: 36px; padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
   .rd-look .per-bar { border-radius: 12px; padding: 10px 14px; }
@@ -72,6 +75,14 @@
   .rd-sort select, .rd-sort button { height: 32px; border-radius: 8px; border: 1px solid var(--mac-border); background: var(--mac-surface); color: var(--mac-text); font: inherit; font-size: 12.5px; }
   .rd-sort select { padding: 0 10px; cursor: pointer; }
   .rd-sort button { width: 32px; cursor: pointer; }
+  .rd-look .entry-form-card label, .rd-look .entry-form-card .form-label, .rd-look .entry-history-card label { font-size: 12px; }
+  .rd-look .entry-form-card input, .rd-look .entry-form-card select, .rd-look .entry-form-card textarea { font-size: 13px; border-radius: 8px; }
+  .rd-look .recent-raw-table th, .rd-look .recent-raw-table td { font-size: 12.5px; }
+  .rd-look .raw-table-wrap { border-radius: 12px; }
+  .rd-look .raw-table th, .rd-look .raw-table td { font-size: 12.5px; }
+  .rd-look .forecast-card, .rd-look .forecast-section { border-radius: 12px; }
+  .rd-look .forecast-section .card-title { font-size: 16px; font-weight: 600; }
+  .rd-look .forecast-table th, .rd-look .forecast-table td { font-size: 12.5px; }
   .rd-look .dash-table thead th { font-size: 12px; font-weight: 600; }
   .table-section .dash-table thead th:first-child { --rd-row: rgb(242, 242, 247); }
   .rd-look .dash-table tbody td { font-size: 13px; padding-top: 12px; padding-bottom: 12px; }`;
@@ -136,6 +147,8 @@
     Object.keys(BR).forEach(k => {
       const root = el(BR[k].root); if (!root) return;
       root.classList.add('rd-look');
+      const box = root.closest('[id^="brand-"]');                       // the whole brand: all four tabs
+      if (box) { box.classList.add('rd-look'); const c = getComputedStyle(root).getPropertyValue('--rd-brand').trim(); if (c) box.style.setProperty('--rd-brand', c); }
       const s = el(BR[k].search); if (s) s.style.backgroundImage = searchIcon;
       try { moveLegend(root); } catch (e) { console.warn('[overview-look]', e && e.message); }
       try { tableTools(k); } catch (e) { console.warn('[overview-look]', e && e.message); }
