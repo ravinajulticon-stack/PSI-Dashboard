@@ -6,7 +6,11 @@
 //  - the Needs Attention pills (their text was a dark brown / red made for a light page),
 //  - the row tints behind the frozen Model column, and the pill / segmented-control backgrounds from overview-look.js,
 //  - every Chart.js chart (axis text, grid lines, tooltips), through a small global plugin.
-// The brand colours (blue / orange / purple) stay as they are; the I (Inventory) data colour stays blue.
+// The brand colours (blue / orange / purple) stay as they are.
+// Calmer tables (Weekly Entry + Full History): the P / S / RE / Proj / I column labels are neutral grey, the I (Inventory)
+// column is plain white, zeros are quiet grey, the edit / delete buttons are grey until hovered, and the entry form's
+// labels and Inventory boxes are neutral. Only non-zero P / S / RE / Proj numbers keep their colour. (The page already wraps
+// every zero in a <span>, so zeros can be told apart from real values with CSS alone.)
 // Styling only: no calculation or data is touched. To undo: remove this script tag from index.html.
 (function () {
   const css = `
@@ -36,7 +40,14 @@
   .rd-look th[style*="mac-accent"], .rd-look td[style*="mac-accent"]:not(.model-col), .rd-look span[style*="mac-accent"]:not([onclick]), .rd-look .col-i, .rd-look .val-i { --mac-accent: #0a84ff; }  /* I column = data colour, not brand */
   .pill-gray { color: var(--mac-text2); }
   .raw-table thead tr.row-col th.col-summary { color: var(--mac-text2); }
-  .model-region { color: var(--mac-text2); }`;
+  .model-region { color: var(--mac-text2); }
+  .recent-raw-table thead tr:last-child th[style*="color"], .rd-look .raw-table thead tr.row-col th[class^="col-"]:not(.col-summary) { color: var(--mac-text3) !important; }
+  .recent-raw-table tbody td[style*="mac-accent"], .rd-look .raw-table tbody td.val-i { color: var(--mac-text) !important; }
+  .recent-raw-table tbody td:not(.model-td) > span:only-child, .rd-look .raw-table tbody td > span:only-child:not(.model-region) { color: var(--mac-text4) !important; opacity: 1 !important; }
+  .recent-raw-table tbody td button { filter: grayscale(1); opacity: 0.55; border-color: var(--mac-border2) !important; background: transparent !important; color: var(--mac-text2) !important; }
+  .recent-raw-table tbody tr:hover td button, .recent-raw-table tbody td button:hover { filter: none; opacity: 1; }
+  .entry-form-card [style*="--mac-green"], .entry-form-card [style*="--mac-orange"], .entry-form-card [style*="--mac-purple"], .entry-form-card [style*="--mac-teal"], .entry-form-card [style*="#34c759"], .entry-form-card [style*="--mac-accent"]:not([onclick]) { color: var(--mac-text3) !important; }
+  .rd-look input[class*="bulk-i"] { border-color: var(--mac-border2) !important; background: var(--mac-surface2) !important; }`;
   const st = document.createElement('style'); st.id = 'psi-dark-theme'; st.textContent = css; document.head.appendChild(st);
 
   // Chart.js draws with colours passed in each chart's own options (light axis text, dark-on-white tooltips), so a global
