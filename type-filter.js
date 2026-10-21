@@ -2,8 +2,9 @@
 // Products carry a `type` (Philips Locks: Handle, Push Pull, Deadbolt, Door Bell; Philips Safes: their
 // series, e.g. "2000 Series"), saved in the psi_models table (column `type`) and copied once from the
 // Saleout dashboard by name. Samsung Locks has no types yet.
-//  - A Type dropdown (called Series on Philips Safes) sits on the Model Summary card next to Filter and
-//    Sort, with counts, plus Untyped. It narrows the Overview's cards, alerts, table AND both charts.
+//  - A Type dropdown (called Series on Philips Safes) sits in the Period bar at the top of the Overview, next to
+//    the quarter buttons and From / to weeks (falling back to the Model Summary tools row if there is no Period bar),
+//    with counts, plus Untyped. It narrows the Overview's cards, alerts, table AND both charts.
 //    The Forecast tab is not affected (it has its own product picker).
 //  - The dropdown stays hidden for a brand until at least one of its products has a type.
 //  - Manage Models gets a Type selector per product, and Add New Model gets a Type field.
@@ -24,6 +25,7 @@
   const css = document.createElement('style');
   css.textContent = [
     '.tf-select.on { border-color: var(--mac-accent); color: var(--mac-accent); font-weight: 600; }',
+    '.per-bar .tf-group { margin-left: 14px; }',
     '.tf-row-select { margin-left: auto; font-family: inherit; font-size: 11px; padding: 4px 6px; border: 1px solid var(--mac-border2); border-radius: 8px; background: var(--mac-surface2); color: var(--mac-text); max-width: 130px; }'
   ].join('\n');
   document.head.appendChild(css);
@@ -42,11 +44,13 @@
 
   // ---------- the dropdown on the Model Summary card ----------
   function syncControl(brand, models) {
-    const b = BR[brand], root = document.getElementById(b.root), tools = root && root.querySelector('.ovl-tools');
-    if (!tools || !Array.isArray(models)) return;
+    const b = BR[brand], root = document.getElementById(b.root);
+    if (!root || !Array.isArray(models)) return;
+    const host = root.querySelector('.per-bar') || root.querySelector('.ovl-tools');
+    if (!host) return;
     const tm = typeMap(brand), counts = new Map(); let untyped = 0;
     models.forEach(m => { const t = tm.get(m.name); if (t) counts.set(t, (counts.get(t) || 0) + 1); else untyped++; });
-    let grp = tools.querySelector('.tf-group');
+    let grp = root.querySelector('.tf-group');
     if (!counts.size) { if (grp) grp.style.display = 'none'; sel[brand] = '__all'; return; }
     if (!grp) {
       grp = document.createElement('div'); grp.className = 'ovl-group tf-group';
@@ -54,8 +58,9 @@
       const lab = document.createElement('span'); lab.className = 'filter-label'; lab.textContent = b.label;
       const s = document.createElement('select'); s.className = 'week-range-select tf-select';
       s.addEventListener('change', () => { sel[brand] = s.value; b.refresh(); });
-      grp.appendChild(lab); grp.appendChild(s); tools.appendChild(grp);
+      grp.appendChild(lab); grp.appendChild(s);
     }
+    if (grp.parentNode !== host) host.insertBefore(grp, host.querySelector('.per-note') || null);   // before the Period note so it stays on the first row
     grp.style.display = '';
     const opts = [['__all', b.all + ' (' + models.length + ')']].concat(sortTypes(Array.from(counts.keys())).map(t => [t, t + ' (' + counts.get(t) + ')']));
     if (untyped) opts.push(['__none', 'Untyped (' + untyped + ')']);
