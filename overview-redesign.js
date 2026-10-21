@@ -203,18 +203,27 @@
     });
   }
 
-  // ---------- 5) Models panel: double-click shows only that model ----------
+  // ---------- 5) Models panel: double-click (two quick clicks) shows only that model ----------
   function hookPanel(brand) {
     const root = el(BR[brand].root), p = root && root.querySelector('.mdl-panel'); if (!p || p.getAttribute('data-rd')) return;
     p.setAttribute('data-rd', '1');
     const foot = p.querySelector('.mdl-foot'); if (foot) foot.textContent = 'Click a name to hide or show it in both charts. Double-click to show only that model. Point at a name to highlight it.';
-    p.querySelector('.mdl-grid').addEventListener('dblclick', e => {
+    // The browser's own 'dblclick' event never fires here: the first click hides the model and redraws the list, so the
+    // second click lands on a replaced element. So the double-click is detected from two clicks on the same name within
+    // 400 ms (this also makes it work as a double-tap on a phone). It runs in the capture phase and stops the second
+    // click, so the model is not toggled back on top of being isolated.
+    let last = { name: null, t: 0 };
+    p.querySelector('.mdl-grid').addEventListener('click', e => {
       const it = e.target.closest('.mdl-item'); if (!it) return;
-      const keep = it.getAttribute('data-name'), st = BR[brand].st();
+      const keep = it.getAttribute('data-name'), now = Date.now();
+      if (last.name !== keep || now - last.t > 400) { last = { name: keep, t: now }; return; }
+      last = { name: null, t: 0 };
+      e.stopPropagation();
+      const st = BR[brand].st();
       const names = Array.from(p.querySelectorAll('.mdl-item')).map(x => x.getAttribute('data-name'));
       st.hidden.clear(); names.forEach(n => { if (n !== keep) st.hidden.add(n); });
       BR[brand].refresh();
-    });
+    }, true);
   }
 
   // ---------- wire into the page's own render steps ----------
