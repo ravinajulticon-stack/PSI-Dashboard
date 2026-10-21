@@ -38,6 +38,7 @@
   .rd-head .section-title, .rd-look .section-header .section-title { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
   .rd-head .section-sub, .rd-look .section-header .section-sub { font-size: 13px; margin-top: 2px; }
   .rd-head-tools input { height: 36px; min-width: 260px; box-sizing: border-box; border-radius: 8px; font-size: 13px; padding-left: 34px !important; background-repeat: no-repeat; background-position: 11px center; background-size: 15px 15px; }
+  .rd-head-tools input:focus { background-repeat: no-repeat; background-position: 11px center; background-size: 15px 15px; }  /* the page's input:focus rule uses the background shorthand, which would reset these and tile the icon */
   .rd-head-tools button { height: 36px; padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
   .rd-look .per-bar { border-radius: 12px; padding: 10px 14px; }
   .rd-look .per-bar .filter-btn.active { background: var(--rd-brand, var(--mac-accent)); border-color: var(--rd-brand, var(--mac-accent)); color: #fff; }
