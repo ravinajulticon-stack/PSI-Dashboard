@@ -8,7 +8,7 @@
 //    Latest Inventory, Avg Weekly Demand, Projected Runway; the 5 most urgent, View All for the rest; a row opens
 //    the weekly detail. When nothing is at risk the original green "all clear" bar stays.
 //  - Model Summary: frozen Model column (keeping each row's tint) with a colour dot matching the charts, names and
-//    status pills on one line, clearer column names, numbers right-aligned with thousands separators, neutral
+//    status pills on one line, clearer column names (number headers may wrap to two lines so the table fits), numbers right-aligned with thousands separators, neutral
 //    colours (Min / Max headers too) except Runway and Status.
 //  - Models panel: double-click a name to show only that model in both charts.
 // Calculations are untouched: it only reads the models the page renders and restyles the result.
@@ -81,6 +81,7 @@
   .table-section .dash-table tbody tr.selected > td:first-child { --rd-row: rgba(0, 122, 255, 0.08); }
   .table-section .dash-table td:first-child .model-name, .table-section .dash-table tbody td:last-child, .table-section .dash-table tbody td:last-child * { white-space: nowrap; }
   .table-section .dash-table thead th.rd-quiet { color: var(--mac-text2) !important; }
+  .table-section .dash-table thead th.rd-num, .table-section .dash-table thead th.rd-run { white-space: normal !important; line-height: 1.25; vertical-align: bottom; }
   .table-section .dash-table thead th:first-child { z-index: 2; }
   .table-section .dash-table .rd-num, .table-section .dash-table .rd-run { text-align: right; font-variant-numeric: tabular-nums; }
   .table-section .dash-table td.rd-num, .table-section .dash-table td.rd-num * { color: var(--mac-text) !important; }
