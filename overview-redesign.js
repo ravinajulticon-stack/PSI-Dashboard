@@ -7,8 +7,9 @@
 //  - Needs Attention panel replaces the stack of alert rows: status icon, model (with its Type), runway pill,
 //    Latest Inventory, Avg Weekly Demand, Projected Runway; the 5 most urgent, View All for the rest; a row opens
 //    the weekly detail. When nothing is at risk the original green "all clear" bar stays.
-//  - Model Summary: frozen Model column with a colour dot matching the charts, clearer column names, numbers
-//    right-aligned with thousands separators, neutral colours except Runway and Status.
+//  - Model Summary: frozen Model column (keeping each row's tint) with a colour dot matching the charts, names and
+//    status pills on one line, clearer column names, numbers right-aligned with thousands separators, neutral
+//    colours (Min / Max headers too) except Runway and Status.
 //  - Models panel: double-click a name to show only that model in both charts.
 // Calculations are untouched: it only reads the models the page renders and restyles the result.
 // This script loads BEFORE type-filter.js and period-filter.js so it receives their filtered / as-at data.
@@ -75,7 +76,11 @@
   .na-cell i { font-style: normal; font-size: 11px; color: var(--mac-text3); margin-left: 4px; }
   .na-chev { color: var(--mac-text3); font-size: 18px; line-height: 1; }
   @media (max-width: 900px) { .na-row { grid-template-columns: 28px minmax(0, 1fr) auto; } .na-cell, .na-chev { display: none; } }
-  .table-section .dash-table th:first-child, .table-section .dash-table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--mac-surface); }
+  .table-section .dash-table th:first-child, .table-section .dash-table td:first-child { position: sticky; left: 0; z-index: 1; background: linear-gradient(var(--rd-row, transparent), var(--rd-row, transparent)), var(--mac-surface); }
+  .table-section .dash-table tbody tr:hover > td:first-child { --rd-row: rgba(0, 122, 255, 0.04); }
+  .table-section .dash-table tbody tr.selected > td:first-child { --rd-row: rgba(0, 122, 255, 0.08); }
+  .table-section .dash-table td:first-child .model-name, .table-section .dash-table tbody td:last-child, .table-section .dash-table tbody td:last-child * { white-space: nowrap; }
+  .table-section .dash-table thead th.rd-quiet { color: var(--mac-text2) !important; }
   .table-section .dash-table thead th:first-child { z-index: 2; }
   .table-section .dash-table .rd-num, .table-section .dash-table .rd-run { text-align: right; font-variant-numeric: tabular-nums; }
   .table-section .dash-table td.rd-num, .table-section .dash-table td.rd-num * { color: var(--mac-text) !important; }
@@ -176,9 +181,11 @@
     const names = ths.map(th => th.textContent.replace(/[\u2191\u2193\u25b2\u25bc\u2195]/g, '').trim());
     const numIdx = names.map((n, i) => NUMS.includes(n) ? i : -1).filter(i => i >= 0), runIdx = names.indexOf('Runway');
     numIdx.forEach(i => ths[i].classList.add('rd-num')); if (runIdx >= 0) ths[runIdx].classList.add('rd-run');
+    names.forEach((n, i) => { if (/^(Min|Max) \(/.test(n)) ths[i].classList.add('rd-quiet'); });
     const list = BR[brand].getM().map(m => m.name);
     table.querySelectorAll('tbody tr').forEach(tr => {
       const tds = tr.children;
+      if (tds[0] && /^Total/i.test(tds[0].textContent.trim())) { const c = getComputedStyle(tr).backgroundColor; if (c && c !== 'rgba(0, 0, 0, 0)') tds[0].style.setProperty('--rd-row', c); }
       numIdx.forEach(i => {
         const td = tds[i]; if (!td) return; td.classList.add('rd-num');
         const walker = document.createTreeWalker(td, NodeFilter.SHOW_TEXT); let n;
