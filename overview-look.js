@@ -79,10 +79,11 @@
   .rd-look .entry-form-card input, .rd-look .entry-form-card select, .rd-look .entry-form-card textarea { font-size: 13px; border-radius: 8px; }
   .rd-look .recent-raw-table th, .rd-look .recent-raw-table td { font-size: 12.5px; }
   .rd-look .raw-table-wrap { border-radius: 12px; }
-  .rd-look .raw-table th, .rd-look .raw-table td { font-size: 12.5px; }
+  .rd-look .raw-table tbody td { font-size: 12.5px; }                 /* header rows keep their compact sizes on purpose */
   .rd-look .forecast-card, .rd-look .forecast-section { border-radius: 12px; }
   .rd-look .forecast-section .card-title { font-size: 16px; font-weight: 600; }
   .rd-look .forecast-table th, .rd-look .forecast-table td { font-size: 12.5px; }
+  .rd-look .recent-raw-table th { font-size: 11px; }                  /* keep the compact header */
   .rd-look .dash-table thead th { font-size: 12px; font-weight: 600; }
   .table-section .dash-table thead th:first-child { --rd-row: rgb(242, 242, 247); }
   .rd-look .dash-table tbody td { font-size: 13px; padding-top: 12px; padding-bottom: 12px; }`;
