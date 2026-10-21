@@ -18,7 +18,7 @@
     philips: { sec: 'philipsForecastSection', sel: 'philipsForecastModelSel', cards: 'philipsForecastCards', table: 'philipsForecastTable', lead: 45, store: 'philips_incoming_v1', full: () => computePhilipsModels(phGetEntries()), inst: () => philipsForecastChartInst },
     plocks:  { sec: 'plocksForecastSection',  sel: 'plocksForecastModelSel',  cards: 'plocksForecastCards',  table: 'plocksForecastTable',  lead: 60, store: 'plocks_incoming_v1',  full: () => computePlocksModels(plGetEntries()),  inst: () => plForecastCI }
   };
-  const SPIKE_MIN = 10, SPIKE_FACTOR = 4;       // a spike: at least 10 units AND more than 4x the product's typical (median) week
+  const SPIKE_MIN = 10, SPIKE_FACTOR = 4;       // big week: at least 10 units AND more than 4x the product's typical (median) week
   const PREF_KEY = 'psi_forecast_prefs_v1';
   let prefs = {}; try { prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); } catch (e) {}
   const S = {};
@@ -29,9 +29,14 @@
   function analyse(m) {                          // looks at the same last 8 weeks the page averages
     const weeks = m.allWeeks.slice(-8);
     const vals = m.s.slice(-8).map(v => (v == null ? 0 : v));
-    const med = median(vals), flagged = [];
-    const adj = vals.map((v, i) => { if (v >= SPIKE_MIN && v > SPIKE_FACTOR * med) { flagged.push({ week: weeks[i], units: v }); return med; } return v; });
-    return { flagged, rawAvg: vals.reduce((a, b) => a + b, 0) / 8, adjAvg: adj.reduce((a, b) => a + b, 0) / 8 };
+    const med = median(vals), big = [];
+    vals.forEach((v, i) => { if (v >= SPIKE_MIN && v > SPIKE_FACTOR * med) big.push(i); });
+    // A one-off = exactly ONE big week, and not the latest week (it may be the start of a trend).
+    // Products with several big weeks sell in regular bulk batches: that is real demand, so it stays in.
+    const flagged = [];
+    if (big.length === 1 && big[0] < vals.length - 1) flagged.push({ week: weeks[big[0]], units: vals[big[0]] });
+    const adj = vals.map((v, i) => (flagged.length && i === big[0] ? med : v));
+    return { flagged, repeated: big.length > 1, rawAvg: vals.reduce((a, b) => a + b, 0) / 8, adjAvg: adj.reduce((a, b) => a + b, 0) / 8 };
   }
   const loadIncoming = key => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; } };
   const fmt = n => (Math.round(n * 10) / 10).toString();
@@ -67,7 +72,7 @@
       '<div class="fcp-group"><span class="fcp-lbl">Products</span><button type="button" class="fcp-prod-btn"></button></div>' +
       '<div class="fcp-group"><span class="fcp-lbl">Sell-Out Rate</span><div class="tab-btns">' +
         '<button type="button" class="tab-btn" data-fcp-rate="avg" title="Average of the last 8 weeks, exactly as the Overview shows it">8-Week Average</button>' +
-        '<button type="button" class="tab-btn" data-fcp-rate="spikes" title="A week counts as a one-off spike when it is at least ' + SPIKE_MIN + ' units and more than ' + SPIKE_FACTOR + 'x that product\'s typical (median) week. Spikes are replaced by the typical week.">Ignore One-Off Spikes</button></div></div>' +
+        '<button type="button" class="tab-btn" data-fcp-rate="spikes" title="A one-off spike is a single week of at least ' + SPIKE_MIN + ' units and more than ' + SPIKE_FACTOR + 'x that product\'s typical (median) week, that is not the latest week. It is replaced by the typical week. Products with several big weeks (regular bulk orders) are left as they are.">Ignore One-Off Spikes</button></div></div>' +
       '<div class="fcp-group"><span class="fcp-lbl">Chart</span><div class="tab-btns">' +
         '<button type="button" class="tab-btn" data-fcp-chart="total" title="One line: total projected inventory against the total Min Stock">Total</button>' +
         '<button type="button" class="tab-btn" data-fcp-chart="product" title="Weeks of cover per product against the Min Stock threshold (10 lowest shown)">By Product</button></div></div>' +
@@ -126,13 +131,14 @@
 
   function refreshNote(brand) {
     const b = BR[brand], st = S[brand], note = document.querySelector('#' + b.sec + ' .fcp-note'); if (!note) return;
-    const found = [];
-    b.full().forEach(m => { const a = analyse(m); a.flagged.forEach(f => found.push({ name: m.name, week: f.week, units: f.units, raw: a.rawAvg, adj: a.adjAvg })); });
+    const found = [], bulk = [];
+    b.full().forEach(m => { const a = analyse(m); a.flagged.forEach(f => found.push({ name: m.name, week: f.week, units: f.units, raw: a.rawAvg, adj: a.adjAvg })); if (a.repeated) bulk.push(m.name); });
     found.sort((x, y) => y.units - x.units);
     const top = found.slice(0, 3).map(f => f.name + ' ' + f.week + ' (' + f.units + ' units)').join(', ') + (found.length > 3 ? ' and ' + (found.length - 3) + ' more' : '');
-    if (!found.length) note.textContent = 'No one-off sell-out spikes in the last 8 weeks, so both rates give the same forecast.';
-    else if (st.spikes) { const f = found[0]; note.textContent = 'Ignoring ' + found.length + ' one-off spike' + (found.length > 1 ? 's' : '') + ': ' + top + '. For example ' + f.name + ' now counts as ' + fmt(f.adj) + ' units a week instead of ' + fmt(f.raw) + '.'; }
-    else note.textContent = found.length + ' one-off spike' + (found.length > 1 ? 's' : '') + ' in the last 8 weeks are included in the average: ' + top + '. Choose Ignore One-Off Spikes to leave them out. (The Overview always uses the plain average.)';
+    const keep = bulk.length ? ' ' + bulk.length + ' product' + (bulk.length > 1 ? 's sell' : ' sells') + ' in repeated large batches (for example ' + bulk[0] + '); that counts as normal demand and is always included.' : '';
+    if (!found.length) note.textContent = 'No one-off sell-out spikes in the last 8 weeks, so both rates give the same forecast.' + keep;
+    else if (st.spikes) { const f = found[0]; note.textContent = 'Ignoring ' + found.length + ' one-off spike' + (found.length > 1 ? 's' : '') + ': ' + top + '. For example ' + f.name + ' now counts as ' + fmt(f.adj) + ' units a week instead of ' + fmt(f.raw) + '.' + keep; }
+    else note.textContent = found.length + ' one-off spike' + (found.length > 1 ? 's' : '') + ' in the last 8 weeks ' + (found.length > 1 ? 'are' : 'is') + ' included in the average: ' + top + '. Choose Ignore One-Off Spikes to leave ' + (found.length > 1 ? 'them' : 'it') + ' out. (The Overview always uses the plain average.)' + keep;
   }
 
   function showEmpty(brand) {
