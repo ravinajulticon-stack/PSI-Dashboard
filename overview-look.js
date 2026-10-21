@@ -5,6 +5,7 @@
 //  - Page: wider (up to 1680 px) with roomier padding.
 //  - Brand tabs: all three the same width (200 px, content centred).
 //  - Samsung header: the same header as Philips Safes / Locks (badge + name + weeks line) on all four tabs.
+//  - Philips Locks header line says "60-Day Validity" like the other two (it said "60-Day Lead").
 //  - Brand colour on every tab: inside each brand the page's accent colour (--mac-accent / --mac-accent-bg) is the
 //    brand's own colour, so Weekly Entry and Full History pick it up (Save buttons, week-filter buttons, month
 //    headers, + New, focus rings). The I (Inventory) column keeps its blue on purpose: it is the data colour code
@@ -190,9 +191,19 @@
     const dm = el('dashboardMeta'); if (dm) new MutationObserver(apply).observe(dm, { childList: true, characterData: true, subtree: true });
     apply(); let n = 0; const t = setInterval(() => { apply(); if (++n > 30) clearInterval(t); }, 1000);
   }
+  // Philips Locks' header line said "60-Day Lead" where Samsung and Safes say "60-Day Validity" (the same 60-day window as the
+  // "Below 60-Day Runway" card). Label only: the page rewrites #plocksDashMeta on every render, so it is watched and re-worded.
+  // (The forecast's "Min Stock (60d lead)" and Safes' 45-day Min / Max are real settings, not labels, and are left alone.)
+  function locksWording() {
+    const dm = el('plocksDashMeta'); if (!dm) return;
+    const fix = () => { const t = dm.textContent, n = t.replace(/60-day lead/i, '60-Day Validity'); if (n !== t) dm.textContent = n; };
+    new MutationObserver(fix).observe(dm, { childList: true, characterData: true, subtree: true });
+    fix();
+  }
   function init() {
     topBar(); colours();
     try { samsungHeaders(); } catch (e) { console.warn('[overview-look]', e && e.message); }
+    try { locksWording(); } catch (e) { console.warn('[overview-look]', e && e.message); }
     Object.keys(BR).forEach(k => {
       const root = el(BR[k].root); if (!root) return;
       root.classList.add('rd-look');
