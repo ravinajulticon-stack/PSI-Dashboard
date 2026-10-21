@@ -3,6 +3,11 @@
 // each brand keeps its own colour, statuses stay Healthy / Monitor / Critical, and the chart legend sits on the
 // right of Inventory Trend (the user chose this over the shared panel above both charts).
 //  - Page: wider (up to 1680 px) with roomier padding.
+//  - Brand tabs: all three the same width (200 px, content centred).
+//  - Brand colour on every tab: inside each brand the page's accent colour (--mac-accent / --mac-accent-bg) is the
+//    brand's own colour, so Weekly Entry and Full History pick it up (Save buttons, week-filter buttons, month
+//    headers, + New, focus rings). The I (Inventory) column keeps its blue on purpose: it is the data colour code
+//    (P green, S orange, RE purple, Proj cyan, I blue) shared by all brands, so it is pinned back to blue.
 //  - Top bar: "Inventory Forecast" app title, brand tabs with a coloured underline, the signed-in user's initials.
 //  - Tabs bar: Overview / Weekly Entry / Full History / Forecast as pills; the active one filled in the brand colour.
 //  - Every tab (not just Overview): larger section titles, 12 px rounded cards, larger table and form text.
@@ -27,6 +32,10 @@
   const css = document.createElement('style');
   css.textContent = `
   .page { max-width: 1680px !important; padding-left: 28px !important; padding-right: 28px !important; }
+  [id^="brand-"].rd-look { --mac-accent: var(--rd-brand); --mac-accent-bg: color-mix(in srgb, var(--rd-brand) 14%, transparent); }
+  .rd-look th[style*="mac-accent"], .rd-look td[style*="mac-accent"]:not(.model-col), .rd-look span[style*="mac-accent"]:not([onclick]), .rd-look .col-i, .rd-look .val-i { --mac-accent: #007aff; }  /* I column = data colour, not brand */
+  .brand-bar .brand-tab { flex: 0 0 200px; box-sizing: border-box; justify-content: center; }
+  @media (max-width: 760px) { .brand-bar .brand-tab { flex: 1 1 0; min-width: 0; } }
   .brand-bar .rd-app { display: flex; align-items: center; gap: 10px; padding: 0 20px 0 4px; margin-right: 8px; border-right: 1px solid var(--mac-border); font-size: 16px; font-weight: 700; color: var(--mac-text); white-space: nowrap; align-self: stretch; }
   .brand-bar .rd-app svg { width: 24px; height: 24px; }
   .brand-bar .brand-tab.active { box-shadow: inset 0 -2px 0 var(--rd-tab, var(--mac-accent)); }
