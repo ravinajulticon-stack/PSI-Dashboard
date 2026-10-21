@@ -11,6 +11,9 @@
 //    drew, for example Philips Safes stuck on W04-W11. The selectors now follow the newest week
 //    unless the user picks a week themselves.
 //
+// 4) The sign-in screen's "Need an account? Sign up" link is hidden: self sign-up is switched
+//    off in Supabase (2026-10-21), so the link could only lead to an error.
+//
 // "Clear All" is deliberately kept switched off: with the confirm fixed it would wipe this
 // browser's copy and bring back the built-in sample data that causes duplicate rows.
 (function () {
@@ -100,4 +103,10 @@
       }).observe(el, { childList: true });
     });
   });
+
+  // ── 4) Hide the dead "Sign up" link on the sign-in screen ──
+  // A style rule (not a DOM edit) so it applies whenever the sign-in screen is built.
+  const hideSignUp = document.createElement('style');
+  hideSignUp.textContent = '#psiToggleModeBtn { display: none !important; }';
+  document.head.appendChild(hideSignUp);
 })();
