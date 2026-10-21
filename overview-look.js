@@ -4,6 +4,7 @@
 // right of Inventory Trend (the user chose this over the shared panel above both charts).
 //  - Page: wider (up to 1680 px) with roomier padding.
 //  - Brand tabs: all three the same width (200 px, content centred).
+//  - Samsung header: the same header as Philips Safes / Locks (badge + name + weeks line) on all four tabs.
 //  - Brand colour on every tab: inside each brand the page's accent colour (--mac-accent / --mac-accent-bg) is the
 //    brand's own colour, so Weekly Entry and Full History pick it up (Save buttons, week-filter buttons, month
 //    headers, + New, focus rings). The I (Inventory) column keeps its blue on purpose: it is the data colour code
@@ -154,8 +155,44 @@
     sel.addEventListener('change', press); dir.addEventListener('click', press);
     box.appendChild(sel); box.appendChild(dir); grp.appendChild(box); syncSort(k);
   }
+  // Samsung's four tabs each had their own header ("Overview", "Weekly Data Entry", "Full History", and none on Forecast), while
+  // Philips Safes / Locks show one header on every tab: brand badge + brand name + "N Weeks Tracked W04 to W42 . 60-Day ...".
+  // This gives Samsung the same header on all four tabs. The per-tab headers keep their buttons (Export JSON, Add Entry, the
+  // Overview tools); only their title and sub-line change. The sub-line is rebuilt from the data (the page rewrites
+  // #dashboardMeta on every render, so that element is watched and the other tabs follow it).
+  function samsungHeaders() {
+    const box = el('brand-samsung'); if (!box) return;
+    const icon = document.querySelector('#brandTab-samsung .brand-icon');
+    const bg = icon ? getComputedStyle(icon).backgroundColor : '#007aff';
+    const subs = [];
+    ['view-dashboard', 'view-entry', 'view-history', 'view-forecast'].forEach(id => {
+      const v = el(id); if (!v) return;
+      let hdr = v.querySelector(':scope > .section-header');
+      if (!hdr) {
+        hdr = document.createElement('div'); hdr.className = 'section-header'; hdr.style.marginTop = '4px';
+        const inner = document.createElement('div'), t0 = document.createElement('div'), s0 = document.createElement('div');
+        t0.className = 'section-title'; s0.className = 'section-sub'; inner.appendChild(t0); inner.appendChild(s0); hdr.appendChild(inner);
+        v.insertBefore(hdr, v.firstChild);
+      }
+      const t = hdr.querySelector('.section-title'), s = hdr.querySelector('.section-sub');
+      if (t && !t.getAttribute('data-sh')) {
+        t.setAttribute('data-sh', '1'); t.style.cssText = 'display:flex;align-items:center;gap:10px;'; t.textContent = '';
+        const b = document.createElement('span');
+        b.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:' + bg + ';border-radius:8px;color:#fff;font-size:13px;font-weight:700;flex-shrink:0;';
+        b.textContent = 'S'; t.appendChild(b); t.appendChild(document.createTextNode('Samsung Locks'));
+      }
+      if (s) subs.push(s);
+    });
+    const meta = () => {
+      try { const w = (computeModels(getEntries())[0] || {}).allWeeks || []; return w.length + ' Weeks Tracked ' + (w[0] || '?') + ' to ' + (w[w.length - 1] || '?') + ' \u00b7 60-Day Validity'; } catch (e) { return null; }
+    };
+    const apply = () => { const m = meta(); if (!m) return; subs.forEach(s => { if (s.textContent !== m) s.textContent = m; }); };
+    const dm = el('dashboardMeta'); if (dm) new MutationObserver(apply).observe(dm, { childList: true, characterData: true, subtree: true });
+    apply(); let n = 0; const t = setInterval(() => { apply(); if (++n > 30) clearInterval(t); }, 1000);
+  }
   function init() {
     topBar(); colours();
+    try { samsungHeaders(); } catch (e) { console.warn('[overview-look]', e && e.message); }
     Object.keys(BR).forEach(k => {
       const root = el(BR[k].root); if (!root) return;
       root.classList.add('rd-look');
