@@ -155,7 +155,8 @@
   .psi-rep-page table { width: 100%; border-collapse: collapse; font-size: 11px; } .psi-rep-page th { text-align: left; background: #eee !important; padding: 4px 6px; border: 1px solid #ccc; } .psi-rep-page td { padding: 4px 6px; border: 1px solid #ccc; }
   .psi-rep-page .num { text-align: right; } .psi-rep-page .rp-red { color: #b3261e !important; font-weight: 700; } .psi-rep-page .rp-amber { color: #b26a00 !important; font-weight: 700; } .psi-rep-page .rp-none { color: #666 !important; font-style: italic; }
   .psi-rep-page .rp-foot { margin-top: 14px; font-size: 10.5px; color: #666 !important; }
-  @media print { body > *:not(.psi-rep-root) { display: none !important; } .psi-rep-root { position: static; background: none; overflow: visible; } .psi-rep-bar { display: none !important; } .psi-rep-page { margin: 0; width: auto; max-width: none; min-height: 0; padding: 0; } @page { size: A4; margin: 12mm; } }`;
+  .rp-all > .psi-rep-page:not(.rp-export) { display: none !important; }
+  @media print { body > *:not(.psi-rep-root) { display: none !important; } .psi-rep-root { position: static; background: none; overflow: visible; } .psi-rep-bar { display: none !important; } .psi-rep-page { margin: 0; width: auto; max-width: none; min-height: 0; padding: 0; } @page { size: A4; margin: 12mm; } .psi-rep-page.rp-export { break-after: page; page-break-after: always; } .psi-rep-page.rp-export:last-child { break-after: auto; page-break-after: auto; } }`;
   document.head.appendChild(css);
   // ---------------- helpers ----------------
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -283,13 +284,14 @@
   }
   function openReport(k0) {
     const old = document.querySelector('.psi-rep-root'); if (old) old.remove();
-    const root = el('div', 'psi-rep-root'), bar = el('div', 'psi-rep-bar'), page = el('div', 'psi-rep-page'); root.appendChild(bar); root.appendChild(page);
+    let page = el('div', 'psi-rep-page'); const basePage = page, root = el('div', 'psi-rep-root'), bar = el('div', 'psi-rep-bar'); root.appendChild(bar); root.appendChild(page);
     const scope = el('select'); [['all', 'All Brands']].concat(Object.keys(cfgs).map(k => [k, cfgs[k].name])).forEach(([v, t]) => { const o = el('option', null, t); o.value = v; scope.appendChild(o); }); scope.value = k0 || 'all';
     const who2 = el('select'); [''].concat(DEPT_NAMES).forEach(n => { const o = el('option', null, n || 'All Departments'); o.value = n; who2.appendChild(o); }); try { who2.value = localStorage.getItem('psi_report_dept_v1') || ''; } catch (e) {} if (who2.selectedIndex < 0) who2.value = '';
     const mkb = (t, fn) => { const b = el('button', 'dl-btn', t); b.type = 'button'; b.addEventListener('click', fn); return b; };
     const lab = el('span', null, 'Scope:'); bar.appendChild(lab); bar.appendChild(scope); bar.appendChild(el('span', null, 'Department:')); bar.appendChild(who2);
-    const copy = mkb('Copy As Text', async () => { try { await navigator.clipboard.writeText(reportText(reportData(scope.value), who2.value.trim())); copy.textContent = 'Copied'; setTimeout(() => { copy.textContent = 'Copy As Text'; }, 1800); } catch (e) { copy.textContent = 'Copy Failed'; } });
-    bar.appendChild(copy); bar.appendChild(mkb('Print / Save As PDF', () => window.print())); bar.appendChild(mkb('Close', () => root.remove()));
+    const copy = mkb('Copy As Text', async () => { try { await navigator.clipboard.writeText(root.classList.contains('rp-all') ? DEPT_NAMES.map(n => reportText(reportData(scope.value), n)).join('\n\n' + '='.repeat(60) + '\n\n') : reportText(reportData(scope.value), who2.value.trim())); copy.textContent = 'Copied'; setTimeout(() => { copy.textContent = 'Copy As Text'; }, 1800); } catch (e) { copy.textContent = 'Copy Failed'; } });
+    const expBtn = mkb('Export All Departments', () => exportAll()), backBtn = mkb('Back To Single Report', () => leaveAll()); backBtn.style.display = 'none'; expBtn.title = 'Puts the six department reports on separate pages, ready to print or save as one PDF';
+    bar.appendChild(copy); bar.appendChild(expBtn); bar.appendChild(backBtn); bar.appendChild(mkb('Print / Save As PDF', () => window.print())); bar.appendChild(mkb('Close', () => root.remove()));
     const table = (heads, body, numCols) => { const t = el('table'), h = el('tr'); heads.forEach((x, i) => h.appendChild(el('th', numCols.indexOf(i) >= 0 ? 'num' : null, x))); const th = el('thead'); th.appendChild(h); t.appendChild(th); const tb = el('tbody'); body.forEach(r => { const tr = el('tr'); r.forEach((c, i) => { const td = el('td', (numCols.indexOf(i) >= 0 ? 'num ' : '') + (c && c.cls ? c.cls : ''), c && c.t != null ? c.t : c); tr.appendChild(td); }); tb.appendChild(tr); }); t.appendChild(tb); return t; };
     const none = txt => el('div', 'rp-none', txt), more = (n, m) => n > m ? el('div', 'rp-sub', n - m + ' more in the dashboard.') : null;
     const caps = n => n <= 3 ? { act: 6, due: 4, late: 4, over: 4 } : { act: 4, due: 3, late: 3, over: 2 };   // fewer sections, more rows each; sized from a worst-case measurement so a full report stays on one A4 page
@@ -309,7 +311,14 @@
       cfg.sections.forEach(key => secs[key](d, cap[key]));
       page.appendChild(el('div', 'rp-foot', 'Deliveries owner: ' + OWNER + (d.metas.length ? '. Last updated ' + d.metas.map(x => cfgs[x.k].name + ' ' + fmtDate(new Date(x.m.updatedAt))).join(', ') : '. No deliveries have been saved yet') + '. Indicative only: built from the weekly history; arrivals count only what is entered on the Deliveries tab; overdue lines are not counted.'));
     };
-    scope.addEventListener('change', draw); who2.addEventListener('change', () => { try { localStorage.setItem('psi_report_dept_v1', who2.value); } catch (e) {} draw(); }); root.addEventListener('keydown', e => { if (e.key === 'Escape') root.remove(); });
+    const exportPages = [];
+    const leaveAll = quiet => { exportPages.splice(0).forEach(p => p.remove()); root.classList.remove('rp-all'); expBtn.style.display = ''; backBtn.style.display = 'none'; who2.disabled = false; page = basePage; if (!quiet) draw(); };
+    const exportAll = () => {      // the six department reports, one per page: print once and save as a single PDF
+      const keep = who2.value; leaveAll(true); root.classList.add('rp-all'); expBtn.style.display = 'none'; backBtn.style.display = ''; who2.disabled = true;
+      DEPT_NAMES.forEach(dept => { const pg = el('div', 'psi-rep-page rp-export'); root.appendChild(pg); exportPages.push(pg); page = pg; who2.value = dept; draw(); });
+      page = basePage; who2.value = keep; root.scrollTop = 0;
+    };
+    scope.addEventListener('change', () => { if (root.classList.contains('rp-all')) exportAll(); else draw(); }); who2.addEventListener('change', () => { try { localStorage.setItem('psi_report_dept_v1', who2.value); } catch (e) {} draw(); }); root.addEventListener('keydown', e => { if (e.key === 'Escape') root.remove(); });
     document.body.appendChild(root); draw();
   }
   // ---------------- install the tab on each brand ----------------
