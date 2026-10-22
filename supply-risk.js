@@ -10,6 +10,8 @@
 //  - Overstock: a new model with under 12 weeks of history but 26+ weeks of cover is flagged Overstock (it used to read "New Model").
 //  - Forecast Accuracy: a collapsible panel under the board replays the history and shows how far off the forecast would have been
 //    (average miss and bias, 4 and 8 weeks ahead, by demand pattern and by week), new method against the current 8-week average.
+//  - Deliveries: when deliveries.js is loaded, the lines on the Deliveries tab (PO, quantity, original and revised date, status) supply the arrivals,
+//    with their delay shown on the board; models without a line still use the older Incoming boxes. Overdue lines are not counted.
 // Nothing here changes the Overview, Weekly Entry, Full History or the existing forecast card. To undo: remove this script tag.
 (function () {
   const BR = {
@@ -145,12 +147,17 @@
     const b = BR[k], models = b.models(); if (!models.length) return null;
     const latestLbl = models[0].allWeeks[models[0].allWeeks.length - 1], latestNum = wkNum(latestLbl); if (latestNum == null) return null;
     const yr = parseInt(((models[0].rows || []).slice(-1)[0] || {}).month, 10); BASE_YEAR = isNaN(yr) ? 0 : yr;
-    const incoming = incomingFor(k);
+    const P = window.PSI_PIPELINE, legacy = incomingFor(k), incoming = Object.assign({}, legacy), pl = P ? P.lines(k) : [], over = new Set();
+    if (pl.length) { const arrs = P.arrivals(k); P.models(k).forEach(n => { incoming[n] = arrs[n] || {}; over.add(n); }); }          // a model with a line on the Deliveries tab ignores the old Incoming boxes
+    const pi = pl.map(l => ({ l, i: P.info(l) })).filter(x => x.i.open), legacyN = Object.keys(legacy).filter(n => !over.has(n)).reduce((s, n) => s + Object.keys(legacy[n] || {}).length, 0);
+    const pipe = P ? { any: pl.length > 0, n: pi.filter(x => !x.i.overdue).length, units: sum(pi.filter(x => !x.i.overdue).map(x => +x.l.qty || 0)), delayed: pi.filter(x => x.i.delay > 0).length, overdue: pi.filter(x => x.i.overdue).length, meta: P.meta(k), legacyN } : null;
     const tots = models.map(m => ({ n: m.name, t: Math.max(0, sum(m.s.map(v => Math.max(0, v || 0)))) })).sort((a, c) => c.t - a.t);
     const grand = sum(tots.map(x => x.t)) || 1; const core = new Set(); let run = 0; for (const x of tots) { if (run / grand >= 0.8) break; core.add(x.n); run += x.t; }
     const list = models.map(m => analyse(m, b.lead, latestNum, incoming, core.has(m.name)));
     list.sort((a, c) => RANK[a.action] - RANK[c.action] || (c.risk || 0) - (a.risk || 0) || (a.cover == null ? 1e9 : a.cover) - (c.cover == null ? 1e9 : c.cover));
-    return { list, latestLbl, latestNum, lines: Object.values(incoming).reduce((a, o) => a + Object.keys(o || {}).length, 0) };
+    const aheadOf = x => { let n = P.isoWeek(x.eff) - latestNum; if (n <= -26) n += 52; return n; };
+    list.forEach(a => { a.dl = pi.filter(x => x.l.model === a.name && x.i.eff).map(x => ({ po: x.l.po, qty: +x.l.qty || 0, eff: x.i.eff, due: x.i.due, delay: x.i.delay, overdue: x.i.overdue })).sort((p, q) => p.eff - q.eff); a.nextLine = a.nextArr ? a.dl.find(x => !x.overdue && aheadOf(x) === a.nextArr.ahead) : null; });
+    return { list, latestLbl, latestNum, pipe, lines: Object.values(incoming).reduce((a, o) => a + Object.keys(o || {}).length, 0) };
   }
   function stockOutText(a, which, latestNum) {
     const p = which === 'likely' ? a.likely : a.cautious; if (a.invNow <= 0) return 'Now';
@@ -183,7 +190,8 @@
     add('Demand Pattern', a.pattern); add('Typical Weekly Demand', fmt1(a.rate));
     add('Demand Over ' + L + ' Days: Likely', Math.round(a.p50) + ' Units'); add('Cautious (80% Sure)', Math.round(a.p80) + ' Units'); add('Worst Case (90% Sure)', Math.round(a.p90) + ' Units');
     add('Stock-Out: Likely / Cautious', stockOutText(a, 'likely', latestNum) + ' / ' + stockOutText(a, 'cautious', latestNum));
-    add('Deliveries Entered', a.onOrder > 0 ? Object.keys(a.arr).map(Number).sort((x, y) => x - y).map(t => wkLabel(latestNum + t) + ': ' + a.arr[t]).join(', ') : 'None');
+    const PP = window.PSI_PIPELINE;
+    add('Deliveries Entered', a.dl && a.dl.length ? a.dl.map(x => (x.po ? x.po + ': ' : '') + x.qty + ' on ' + PP.fmtDate(x.eff) + (x.overdue ? ' (Overdue, Not Counted)' : (x.delay > 0 ? ' (' + x.delay + ' Days Late)' : ''))).join('; ') : (a.onOrder > 0 ? Object.keys(a.arr).map(Number).sort((x, y) => x - y).map(t => wkLabel(latestNum + t) + ': ' + a.arr[t]).join(', ') : 'None'));
     add('Weeks Left Out Of The Estimate', a.emptyWeeks + ' Empty Shelf, ' + a.prelaunch + ' Before Launch');
     add('Weeks Of History', a.series.length + (a.isNew ? ' (Short: Treat With Care)' : ''));
     if (a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action)) add('Suggested Order', a.suggest + ' Units (' + Math.round(a.svc * 100) + '% Cover + ' + CYCLE_WEEKS + ' Weeks)');
@@ -234,6 +242,16 @@
     }
     host.appendChild(box);
   }
+  function noteText(res) {
+    const p = res.pipe, lines = res.lines, P = window.PSI_PIPELINE;
+    if (p && p.any) {
+      let t = 'Deliveries counted: ' + p.n + ' on the Deliveries tab (' + p.units.toLocaleString() + ' units)' + (p.delayed ? ', ' + p.delayed + ' running late' : '') + (p.overdue ? ', ' + p.overdue + ' overdue and not counted' : '');
+      if (p.meta && p.meta.updatedAt) { const age = P.daysBetween(new Date(p.meta.updatedAt), new Date()); t += '. Last updated ' + P.fmtDate(new Date(p.meta.updatedAt)) + (p.meta.updatedBy ? ' by ' + p.meta.updatedBy : '') + (age > P.staleDays ? ', which is ' + age + ' days ago: check the dates with ' + P.owner : ''); }
+      return t + '.' + (p.legacyN ? ' Models with no delivery line use the older Incoming boxes.' : '') + ' Anything not entered is treated as not ordered.';
+    }
+    if (lines > 0) return 'Deliveries counted: the ' + lines + ' line' + (lines === 1 ? '' : 's') + ' typed into the older Incoming boxes. Add them on the Deliveries tab to see delays and dates here. Anything not entered is treated as not ordered.';
+    return 'No deliveries are entered, so every model is treated as having nothing on order. Add them on the Deliveries tab' + (P ? ' (' + P.owner + ' keeps this list)' : '') + ' to see arrival dates and delays here.';
+  }
   function render(k) {
     const b = BR[k], root = document.getElementById(b.root); if (!root) return;
     let host = root.querySelector(':scope > .sr-board');
@@ -243,13 +261,14 @@
     const counts = {}; list.forEach(a => counts[a.action] = (counts[a.action] || 0) + 1);
     const head = el('div', 'sr-head'); const ttl = el('div'); ttl.appendChild(el('div', 'sr-title', 'Supply Risk Board'));
     ttl.appendChild(el('div', 'sr-sub', b.name + '  |  Lead Time ' + b.lead + ' Days  |  Latest Week ' + latestLbl + '  |  Demand: Croston-SBA, Empty-Shelf Weeks Left Out'));
+    if (window.PSI_PIPELINE && window.PSI_PIPELINE.openReport) { const rb = el('button', 'sr-acc-toggle', 'Weekly Supply Report'); rb.type = 'button'; rb.style.marginTop = '8px'; rb.addEventListener('click', () => window.PSI_PIPELINE.openReport(k)); ttl.appendChild(rb); }
     head.appendChild(ttl); const chips = el('div', 'sr-chips');
     ['Order Now', 'Expedite', 'Watch', 'OK', 'Overstock', 'New Model', 'Low Volume'].forEach(name => {
       const c = el('button', 'sr-chip' + (st.filter === name ? ' on' : '') + (counts[name] ? '' : ' zero'), name + ' ' + (counts[name] || 0)); c.type = 'button'; c.style.setProperty('--c', COL[name]);
       c.addEventListener('click', () => { st.filter = st.filter === name ? null : name; st.open = null; render(k); }); chips.appendChild(c);
     });
     head.appendChild(chips); host.appendChild(head);
-    host.appendChild(el('div', 'sr-note', lines > 0 ? 'Deliveries counted: the ' + lines + ' line' + (lines === 1 ? '' : 's') + ' typed into the Incoming boxes of the forecast below. Anything not typed there is treated as not ordered.' : 'No deliveries are entered, so every model is treated as having nothing on order. Type expected deliveries into the Incoming boxes of the forecast below to see arrival dates here.'));
+    host.appendChild(el('div', 'sr-note', noteText(res)));
     const wrap = el('div', 'sr-wrap'); const tbl = el('table', 'sr-table'); const thead = el('thead'); const hr = el('tr');
     [['Model', ''], ['On Hand', ''], ['Demand / Wk', 'Typical weekly demand (Croston-SBA, empty-shelf weeks left out)'], ['Cover (Wks)', 'On hand divided by weekly demand'], ['Stock-Out', 'Likely week, with the cautious week (80% sure) in brackets'], ['Next Arrival', 'From the Incoming boxes'], ['Gap (Wks)', 'Weeks without stock in the next ' + H + ' weeks, likely case'], ['Chance Of Running Out', 'Share of past lead-time windows in which demand beat today\'s stock'], ['Suggested Order', 'Covers the chosen chance of not running out over the lead time, plus ' + CYCLE_WEEKS + ' weeks'], ['Action', '']].forEach(([t, tip]) => { const th = el('th', null, t); if (tip) th.title = tip; hr.appendChild(th); });
     thead.appendChild(hr); tbl.appendChild(thead); const tb = el('tbody');
@@ -258,7 +277,9 @@
       const cell = (t, cls) => { const td = el('td', cls || null, t); tr.appendChild(td); return td; };
       cell(String(a.invNow), a.invNow <= 0 ? 'sr-bad' : null); cell(fmt1(a.rate)); cell(fmt1(a.cover), a.cover != null && a.cover < a.L ? 'sr-bad' : null);
       const so = stockOutText(a, 'likely', latestNum), sc = stockOutText(a, 'cautious', latestNum); cell(so === '\u2014' && sc === '\u2014' ? '\u2014' : so + (sc !== so ? ' (' + sc + ')' : ''), so === 'Now' ? 'sr-bad' : null);
-      cell(a.nextArr ? wkLabel(latestNum + a.nextArr.ahead) + ' (' + a.nextArr.qty + ')' : 'None', a.nextArr ? null : 'sr-dim');
+      const late = a.nextLine && a.nextLine.delay > 0, od = !a.nextArr && a.dl && a.dl.some(x => x.overdue);
+      const nx = cell(a.nextArr ? wkLabel(latestNum + a.nextArr.ahead) + ' (' + a.nextArr.qty + ')' + (late ? ' +' + a.nextLine.delay + 'd' : '') : (od ? 'Overdue' : 'None'), late || od ? 'sr-bad' : (a.nextArr ? null : 'sr-dim'));
+      if (late) nx.title = 'Running ' + a.nextLine.delay + ' days late'; if (od) nx.title = 'The date has passed and it is not marked Arrived, so it is not counted. Update it on the Deliveries tab.';
       cell(a.nextArr || a.likely.empty === 0 ? (a.likely.empty ? String(a.likely.empty) : '0') : '\u2014', a.likely.empty > 0 ? 'sr-bad' : 'sr-dim');
       cell(a.risk == null ? '\u2014' : a.risk + '%', a.risk >= 50 ? 'sr-bad' : (a.risk == null ? 'sr-dim' : null));
       cell(a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action) ? String(a.suggest) : '\u2014', a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action) ? null : 'sr-dim');
@@ -273,8 +294,10 @@
   function refreshVisible() { Object.keys(BR).forEach(k => { const r = document.getElementById(BR[k].root); if (r && r.offsetParent !== null) { try { render(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } } }); }
   Object.keys(BR).forEach(k => {
     const b = BR[k], orig = window[b.sw]; if (typeof orig !== 'function') return;
-    window[b.sw] = function (name) { const r = orig.apply(this, arguments); if (name === b.view) setTimeout(() => { try { render(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } }, 80); return r; };
+    window[b.sw] = function (name) { const r = orig.apply(this, arguments); if (name === b.view) setTimeout(() => { try { render(k); if (window.PSI_PIPELINE) window.PSI_PIPELINE.refresh(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } }, 80); return r; };
   });
   ['renderForecast', 'renderPlocksForecast'].forEach(fn => { const o = window[fn]; if (typeof o !== 'function') return; window[fn] = function () { const r = o.apply(this, arguments); setTimeout(refreshVisible, 40); return r; }; });
+  window.__srApi = { getAnalysis, BR, wkLabel, stockOutText };                     // used by the Weekly Supply Report in deliveries.js
+  let hooks = 0; (function hook() { if (window.PSI_PIPELINE) window.PSI_PIPELINE.onChange(refreshVisible); else if (hooks++ < 20) setTimeout(hook, 600); })();   // redraw the board when deliveries change
   window.__srTest = { analyse, projectStock, croston, wkLabel, wkNum, backtest, patternOf };
 })();
