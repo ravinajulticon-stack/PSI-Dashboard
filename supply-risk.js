@@ -250,6 +250,7 @@
       return t + '.' + (p.legacyN ? ' Models with no delivery line use the older Incoming boxes.' : '') + ' Anything not entered is treated as not ordered.';
     }
     if (lines > 0) return 'Deliveries counted: the ' + lines + ' line' + (lines === 1 ? '' : 's') + ' typed into the older Incoming boxes. Add them on the Deliveries tab to see delays and dates here. Anything not entered is treated as not ordered.';
+    if (p && p.meta && p.meta.confirmed === 'none') { const age = P.daysBetween(new Date(p.meta.updatedAt), new Date()); return 'Nothing is on order for this brand: confirmed by ' + (p.meta.updatedBy || 'Unknown') + ' on ' + P.fmtDate(new Date(p.meta.updatedAt)) + (age > P.staleDays ? ', which is ' + age + ' days ago: confirm again on the Deliveries tab' : '') + '. Every model is treated as having nothing on order.'; }
     return 'No deliveries are entered, so every model is treated as having nothing on order. Add them on the Deliveries tab' + (P ? ' (' + P.owner + ' keeps this list)' : '') + ' to see arrival dates and delays here.';
   }
   function render(k) {
