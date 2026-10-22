@@ -22,7 +22,8 @@
   const pct = (a, p) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
   const croston = h => { let z = 0, p = 1, q = 1, init = false; for (const v of h) { if (v > 0) { if (!init) { z = v; p = q; init = true; } else { z = 0.1 * v + 0.9 * z; p = 0.1 * q + 0.9 * p; } q = 1; } else q++; } return init ? 0.95 * z / p : 0; };
   const wkNum = lbl => { const m = /W(\d+)/.exec(lbl || ''); return m ? +m[1] : null; };
-  const wkLabel = n => 'W' + String(((n - 1) % 52 + 52) % 52 + 1).padStart(2, '0');
+  let BASE_YEAR = 0;                                                               // year of the latest week; set on every render
+  const wkLabel = n => 'W' + String(((n - 1) % 52 + 52) % 52 + 1).padStart(2, '0') + (BASE_YEAR && n > 52 ? ' \u2019' + String(BASE_YEAR + 1).slice(-2) : '');   // weeks past W52 get a next-year mark
   function projectStock(inv, rate, arr) {                                          // arr: {weeksAhead: units}; stock floors at zero (lost sales)
     let stock = inv, firstShort = null, empty = 0; const path = [inv];
     for (let t = 1; t <= H; t++) { stock += (arr[t] || 0) - rate; if (stock < 0) { stock = 0; if (firstShort === null) firstShort = t; empty++; } path.push(stock); }
@@ -104,6 +105,7 @@
   function getAnalysis(k) {
     const b = BR[k], models = b.models(); if (!models.length) return null;
     const latestLbl = models[0].allWeeks[models[0].allWeeks.length - 1], latestNum = wkNum(latestLbl); if (latestNum == null) return null;
+    const yr = parseInt(((models[0].rows || []).slice(-1)[0] || {}).month, 10); BASE_YEAR = isNaN(yr) ? 0 : yr;
     const incoming = incomingFor(k);
     const tots = models.map(m => ({ n: m.name, t: Math.max(0, sum(m.s.map(v => Math.max(0, v || 0)))) })).sort((a, c) => c.t - a.t);
     const grand = sum(tots.map(x => x.t)) || 1; const core = new Set(); let run = 0; for (const x of tots) { if (run / grand >= 0.8) break; core.add(x.n); run += x.t; }
@@ -121,12 +123,14 @@
     for (let i = 0; i < N; i++) { let st = a.invNow; const p = [st]; for (let t = 1; t <= H; t++) { const d = base.length ? base[Math.floor(Math.random() * base.length)] * sc : 0; st = Math.max(0, st + (a.arr[t] || 0) - d); p.push(st); } paths.push(p); }
     const at = (t, q) => pct(paths.map(p => p[t]), q);
     const labels = ['Now']; for (let t = 1; t <= H; t++) labels.push(wkLabel(latestNum + t));
-    const brandCol = getComputedStyle(document.getElementById(BR[k].box)).getPropertyValue('--rd-brand').trim() || '#0a84ff';
+    const rawCol = getComputedStyle(document.getElementById(BR[k].box)).getPropertyValue('--rd-brand').trim() || 'rgb(10, 132, 255)';
+    const mm = /(\d+)\D+(\d+)\D+(\d+)/.exec(rawCol);                                // the brand colour comes back as rgb(...), so build the faded band from its parts
+    const brandCol = mm ? 'rgb(' + mm[1] + ',' + mm[2] + ',' + mm[3] + ')' : '#0a84ff', bandCol = mm ? 'rgba(' + mm[1] + ',' + mm[2] + ',' + mm[3] + ',0.22)' : 'rgba(10,132,255,0.22)';
     const leadIdx = a.L;
     if (charts[k]) { charts[k].destroy(); }
     charts[k] = new Chart(canvas, { type: 'line', data: { labels, datasets: [
       { label: 'Low End (10th Percentile)', data: labels.map((_, t) => at(t, 0.1)), borderColor: 'transparent', backgroundColor: 'transparent', pointRadius: 0, fill: false },
-      { label: 'Likely Range', data: labels.map((_, t) => at(t, 0.9)), borderColor: 'transparent', backgroundColor: brandCol + '33', pointRadius: 0, fill: '-1' },
+      { label: 'Likely Range', data: labels.map((_, t) => at(t, 0.9)), borderColor: 'transparent', backgroundColor: bandCol, pointRadius: 0, fill: '-1' },
       { label: 'Median Stock', data: labels.map((_, t) => at(t, 0.5)), borderColor: brandCol, backgroundColor: brandCol, borderWidth: 2, pointRadius: 0, tension: 0.15, fill: false }
     ] }, options: { responsive: true, maintainAspectRatio: false, animation: false,
       plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
