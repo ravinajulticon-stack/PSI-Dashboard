@@ -43,6 +43,8 @@
   .brand-bar .rd-app { display: flex; align-items: center; gap: 10px; padding: 0 20px 0 4px; margin-right: 8px; border-right: 1px solid var(--mac-border); font-size: 16px; font-weight: 700; color: var(--mac-text); white-space: nowrap; align-self: stretch; }
   .brand-bar .rd-app svg { width: 24px; height: 24px; }
   .brand-bar .brand-tab.active { box-shadow: inset 0 -2px 0 var(--rd-tab, var(--mac-accent)); border-bottom-color: var(--rd-tab, var(--mac-accent)); }   /* the page's own 2px border was Samsung blue for Philips Locks */
+  /* Manage Models panel: the Archive (67 px) and Unarchive (80 px) buttons were different widths, which pushed the Series dropdown out of line on archived rows */
+  [id^="manageModelsList-"] button { box-sizing: border-box; min-width: 88px; text-align: center; }
   .brand-bar .rd-user { display: flex; align-items: center; gap: 8px; margin-right: 12px; font-size: 12px; font-weight: 600; color: var(--mac-text); white-space: nowrap; }
   .brand-bar .rd-user b { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #1f2a37; color: #fff; font-size: 11px; letter-spacing: .02em; }
   .sub-toolbar .seg-control { align-self: stretch; gap: 0; background: none; border: 0; box-shadow: none; padding: 0; }
