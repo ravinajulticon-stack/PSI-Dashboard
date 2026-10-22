@@ -5,8 +5,8 @@
 //  - Range: "likely / cautious / worst case" = 50th / 80th / 90th percentile of demand over one lead time, from the model's own history.
 //  - Supply: deliveries already typed into the Forecast tab's "Incoming" boxes (stored per model and week). Anything not typed in
 //    is treated as NOT ordered, and the board says so.
-//  - Phase 0: the "Ignore One-Off Spikes" setting is switched off once on each device (the back-test showed it under-forecasts by
-//    about 28%) and its tooltip says so. The choice is respected afterwards.
+//  - Phase 0: the "Ignore One-Off Spikes" option was removed from the forecast card (the back-test showed it under-forecast demand by
+//    about 28%).
 // Nothing here changes the Overview, Weekly Entry, Full History or the existing forecast card. To undo: remove this script tag.
 (function () {
   const BR = {
@@ -187,15 +187,6 @@
     });
     tbl.appendChild(tb); wrap.appendChild(tbl); host.appendChild(wrap);
     host.appendChild(el('div', 'sr-foot', 'Indicative only. Built from ' + (list[0] ? list[0].series.length : 0) + ' or fewer weeks of history, so lumpy models stay hard to predict (the back-test missed by 66% to 80% on them): use the range, not a single date. Click a model for its range and projection. Core models (80% of units sold) are planned at 90% cover, the rest at 80%.'));
-    phase0(k);
-  }
-  function phase0(k) {                                                             // switch the spike setting off once per device, and say why
-    const root = document.getElementById(BR[k].root); if (!root) return;
-    const spike = root.querySelector('[data-fcp-rate="spikes"]'), avg = root.querySelector('[data-fcp-rate="avg"]'); if (!spike || !avg) return;
-    const why = 'Back-test (Oct 2026): this setting under-forecast demand by about 28% on this business, because the big weeks are real orders that repeat. It is off by default. ';
-    if (spike.title.indexOf('Back-test') !== 0) spike.title = why + spike.title;
-    let done = false; try { done = localStorage.getItem('psi_fc_spikes_reset_v1') === '1'; } catch (e) {}
-    if (!done) { try { localStorage.setItem('psi_fc_spikes_reset_v1', '1'); } catch (e) {} if (spike.classList.contains('active')) avg.click(); }
   }
   function refreshVisible() { Object.keys(BR).forEach(k => { const r = document.getElementById(BR[k].root); if (r && r.offsetParent !== null) { try { render(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } } }); }
   Object.keys(BR).forEach(k => {

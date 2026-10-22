@@ -1,13 +1,13 @@
 // PSI Dashboard - Forecast tab upgrades (added 2026-10-21)
 //  1. Product picker: choose exactly which products the forecast covers.
-//  2. Sell-Out Rate: the forecast can ignore one-off spikes instead of averaging them in.
-//  3. Chart: "Total" (one projected-inventory line against ONE matching Min Stock line) or
+//  2. Chart: "Total" (one projected-inventory line against ONE matching Min Stock line) or
 //     "By Product" (weeks of cover per product against the minimum), instead of 6 products
 //     drawn against a Min Stock line that was calculated for all products together.
-// It wraps the page's own renderForecast(models, brand): the products and sell-out rates are
-// adjusted before the original draws the cards and table, and the chart is replaced afterwards.
+// It wraps the page's own renderForecast(models, brand): the selected products are
+// passed on before the original draws the cards and table, and the chart is replaced afterwards.
 // Anything unexpected falls back to the original forecast untouched. Overview numbers are not
 // affected (they still use the plain 8-week average).
+// An "Ignore One-Off Spikes" option was removed on 2026-10-22: the back-test showed it under-forecast demand by about 28%.
 (function () {
   if (window.__fcpInstalled || typeof window.renderForecast !== 'function') return;
   window.__fcpInstalled = true;
@@ -18,26 +18,12 @@
     philips: { sec: 'philipsForecastSection', sel: 'philipsForecastModelSel', cards: 'philipsForecastCards', table: 'philipsForecastTable', lead: 45, store: 'philips_incoming_v1', full: () => computePhilipsModels(phGetEntries()), inst: () => philipsForecastChartInst },
     plocks:  { sec: 'plocksForecastSection',  sel: 'plocksForecastModelSel',  cards: 'plocksForecastCards',  table: 'plocksForecastTable',  lead: 60, store: 'plocks_incoming_v1',  full: () => computePlocksModels(plGetEntries()),  inst: () => plForecastCI }
   };
-  const SPIKE_MIN = 10, SPIKE_FACTOR = 4;       // big week: at least 10 units AND more than 4x the product's typical (median) week
   const PREF_KEY = 'psi_forecast_prefs_v1';
   let prefs = {}; try { prefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); } catch (e) {}
   const S = {};
-  Object.keys(BR).forEach(k => { S[k] = { selected: null, spikes: !!(prefs[k] && prefs[k].spikes), chart: (prefs[k] && prefs[k].chart) === 'product' ? 'product' : 'total' }; });
-  const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(Object.fromEntries(Object.keys(S).map(k => [k, { spikes: S[k].spikes, chart: S[k].chart }])))); } catch (e) {} };
+  Object.keys(BR).forEach(k => { S[k] = { selected: null, chart: (prefs[k] && prefs[k].chart) === 'product' ? 'product' : 'total' }; });
+  const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(Object.fromEntries(Object.keys(S).map(k => [k, { chart: S[k].chart }])))); } catch (e) {} };
 
-  const median = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
-  function analyse(m) {                          // looks at the same last 8 weeks the page averages
-    const weeks = m.allWeeks.slice(-8);
-    const vals = m.s.slice(-8).map(v => (v == null ? 0 : v));
-    const med = median(vals), big = [];
-    vals.forEach((v, i) => { if (v >= SPIKE_MIN && v > SPIKE_FACTOR * med) big.push(i); });
-    // A one-off = exactly ONE big week, and not the latest week (it may be the start of a trend).
-    // Products with several big weeks sell in regular bulk batches: that is real demand, so it stays in.
-    const flagged = [];
-    if (big.length === 1 && big[0] < vals.length - 1) flagged.push({ week: weeks[big[0]], units: vals[big[0]] });
-    const adj = vals.map((v, i) => (flagged.length && i === big[0] ? med : v));
-    return { flagged, repeated: big.length > 1, rawAvg: vals.reduce((a, b) => a + b, 0) / 8, adjAvg: adj.reduce((a, b) => a + b, 0) / 8 };
-  }
   const loadIncoming = key => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; } };
   const fmt = n => (Math.round(n * 10) / 10).toString();
 
@@ -48,7 +34,6 @@
   .fcp-group{display:flex;align-items:center;gap:6px}
   .fcp-lbl{font-size:11px;color:var(--mac-text3)}
   .fcp-prod-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--mac-border2);background:var(--mac-surface);color:var(--mac-text);cursor:pointer}
-  .fcp-note{flex-basis:100%;font-size:11px;color:var(--mac-text3);line-height:1.5}
   .fcp-panel{position:absolute;top:100%;left:8px;z-index:60;width:310px;background:var(--mac-surface);border:1px solid var(--mac-border2);border-radius:var(--mac-radius-sm);box-shadow:0 10px 28px rgba(0,0,0,.18);padding:8px}
   .fcp-panel[hidden]{display:none}
   .fcp-panel input[type=search]{width:100%;font-size:11px;padding:5px 8px;border-radius:6px;margin-bottom:6px;box-sizing:border-box}
@@ -70,13 +55,9 @@
     const bar = document.createElement('div'); bar.className = 'fcp-bar';
     bar.innerHTML =
       '<div class="fcp-group"><span class="fcp-lbl">Products</span><button type="button" class="fcp-prod-btn"></button></div>' +
-      '<div class="fcp-group"><span class="fcp-lbl">Sell-Out Rate</span><div class="tab-btns">' +
-        '<button type="button" class="tab-btn" data-fcp-rate="avg" title="Average of the last 8 weeks, exactly as the Overview shows it">8-Week Average</button>' +
-        '<button type="button" class="tab-btn" data-fcp-rate="spikes" title="A one-off spike is a single week of at least ' + SPIKE_MIN + ' units and more than ' + SPIKE_FACTOR + 'x that product\'s typical (median) week, that is not the latest week. It is replaced by the typical week. Products with several big weeks (regular bulk orders) are left as they are.">Ignore One-Off Spikes</button></div></div>' +
       '<div class="fcp-group"><span class="fcp-lbl">Chart</span><div class="tab-btns">' +
         '<button type="button" class="tab-btn" data-fcp-chart="total" title="One line: total projected inventory against the total Min Stock">Total</button>' +
         '<button type="button" class="tab-btn" data-fcp-chart="product" title="Weeks of cover per product against the Min Stock threshold (10 lowest shown)">By Product</button></div></div>' +
-      '<div class="fcp-note"></div>' +
       '<div class="fcp-panel" hidden><input type="search" placeholder="Search Products..."><div class="fcp-quick">' +
         '<button type="button" data-q="all">Select All</button><button type="button" data-q="none">Clear</button><button type="button" data-q="sell">Has Sell-Out</button><button type="button" data-q="risk">At Risk</button></div>' +
         '<div class="fcp-list"></div><div class="fcp-foot"><span class="fcp-count"></span><button type="button" class="fcp-done">Done</button></div></div>';
@@ -105,7 +86,6 @@
       st.selected = all.every(n => cur.has(n)) ? null : cur;
       refreshLabels(brand); rerender(brand);
     });
-    bar.querySelectorAll('[data-fcp-rate]').forEach(btn => btn.addEventListener('click', () => { S[brand].spikes = btn.getAttribute('data-fcp-rate') === 'spikes'; savePrefs(); rerender(brand); }));
     bar.querySelectorAll('[data-fcp-chart]').forEach(btn => btn.addEventListener('click', () => { S[brand].chart = btn.getAttribute('data-fcp-chart'); savePrefs(); rerender(brand); }));
   }
 
@@ -113,9 +93,9 @@
     const b = BR[brand], st = S[brand], panel = document.querySelector('#' + b.sec + ' .fcp-panel'); if (!panel) return;
     const term = panel.querySelector('input').value.trim().toLowerCase(), all = b.full();
     panel.querySelector('.fcp-list').innerHTML = all.filter(m => !term || m.name.toLowerCase().includes(term)).map(m => {
-      const a = analyse(m), rate = st.spikes && a.flagged.length ? a.adjAvg : a.rawAvg;
+      const rate = m.avgS;
       const on = !st.selected || st.selected.has(m.name);
-      return '<label class="fcp-item"><input type="checkbox" value="' + m.name.replace(/"/g, '&quot;') + '"' + (on ? ' checked' : '') + '><span>' + m.name + '</span><span class="fcp-sub">' + fmt(rate) + '/wk' + (a.flagged.length ? ' ⚡' : '') + '</span></label>';
+      return '<label class="fcp-item"><input type="checkbox" value="' + m.name.replace(/"/g, '&quot;') + '"' + (on ? ' checked' : '') + '><span>' + m.name + '</span><span class="fcp-sub">' + fmt(rate) + '/wk' + '</span></label>';
     }).join('') || '<div class="fcp-sub" style="padding:6px">No Products Match.</div>';
     refreshLabels(brand);
   }
@@ -125,20 +105,7 @@
     const all = b.full(), n = st.selected ? all.filter(m => st.selected.has(m.name)).length : all.length;
     const pb = sec.querySelector('.fcp-prod-btn'); if (pb) pb.textContent = (n === all.length ? 'All (' + all.length + ')' : n + ' of ' + all.length) + ' ▾';
     const cnt = sec.querySelector('.fcp-count'); if (cnt) cnt.textContent = n + ' of ' + all.length + ' selected';
-    sec.querySelectorAll('[data-fcp-rate]').forEach(x => x.classList.toggle('active', (x.getAttribute('data-fcp-rate') === 'spikes') === st.spikes));
     sec.querySelectorAll('[data-fcp-chart]').forEach(x => x.classList.toggle('active', x.getAttribute('data-fcp-chart') === st.chart));
-  }
-
-  function refreshNote(brand) {
-    const b = BR[brand], st = S[brand], note = document.querySelector('#' + b.sec + ' .fcp-note'); if (!note) return;
-    const found = [], bulk = [];
-    b.full().forEach(m => { const a = analyse(m); a.flagged.forEach(f => found.push({ name: m.name, week: f.week, units: f.units, raw: a.rawAvg, adj: a.adjAvg })); if (a.repeated) bulk.push(m.name); });
-    found.sort((x, y) => y.units - x.units);
-    const top = found.slice(0, 3).map(f => f.name + ' ' + f.week + ' (' + f.units + ' units)').join(', ') + (found.length > 3 ? ' and ' + (found.length - 3) + ' more' : '');
-    const keep = bulk.length ? ' ' + bulk.length + ' product' + (bulk.length > 1 ? 's sell' : ' sells') + ' in repeated large batches (for example ' + bulk[0] + '); that counts as normal demand and is always included.' : '';
-    if (!found.length) note.textContent = 'No one-off sell-out spikes in the last 8 weeks, so both rates give the same forecast.' + keep;
-    else if (st.spikes) { const f = found[0]; note.textContent = 'Ignoring ' + found.length + ' one-off spike' + (found.length > 1 ? 's' : '') + ': ' + top + '. For example ' + f.name + ' now counts as ' + fmt(f.adj) + ' units a week instead of ' + fmt(f.raw) + '.' + keep; }
-    else note.textContent = found.length + ' one-off spike' + (found.length > 1 ? 's' : '') + ' in the last 8 weeks ' + (found.length > 1 ? 'are' : 'is') + ' included in the average: ' + top + '. Choose Ignore One-Off Spikes to leave ' + (found.length > 1 ? 'them' : 'it') + ' out. (The Overview always uses the plain average.)' + keep;
   }
 
   function showEmpty(brand) {
@@ -186,8 +153,7 @@
       buildUI(brand);
       const st = S[brand];
       let list = (models || []).filter(m => !st.selected || st.selected.has(m.name));
-      if (st.spikes) list = list.map(m => { const a = analyse(m); return a.flagged.length ? Object.assign({}, m, { avgS: a.adjAvg }) : m; });
-      refreshLabels(brand); refreshNote(brand);
+      refreshLabels(brand);
       if (!list.length) { showEmpty(brand); return; }
       const r = orig.call(this, list, brand);
       fixChart(brand, list);
