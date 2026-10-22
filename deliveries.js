@@ -356,7 +356,7 @@
       const k = i.dataset.brand, ls = (k && S[k] ? live(k) : []).filter(l => { const f = info(l, t); return l.model === i.dataset.model && f.open && !f.overdue && f.eff && wkKey(f.eff) === i.dataset.week; });
       i.title = ls.length ? ls.map(l => (l.po || 'No PO') + ': ' + l.qty + ' (' + l.status + '), ' + fmtDate(parseD(l.revised || l.due))).join('\n') : 'Locked: incoming stock now comes from the Deliveries tab.';
     });
-    document.querySelectorAll('.card *, [id$="ForecastSection"] *').forEach(e => { if (e.children.length === 0 && /Enter expected incoming stock/.test(e.textContent)) e.textContent = '\uD83D\uDCE6 Incoming stock comes from the Deliveries tab and is read-only here. To change an arrival, edit its delivery on the Deliveries tab.'; });
+    document.querySelectorAll('.card *, [id$="orecastSection"] *').forEach(e => { if (e.children.length === 0 && /Enter expected incoming stock/.test(e.textContent)) e.textContent = '\uD83D\uDCE6 Incoming stock comes from the Deliveries tab and is read-only here. To change an arrival, edit its delivery on the Deliveries tab.'; });
   }
   ['renderForecast', 'renderPlocksForecast'].forEach(fn => { const o = window[fn]; if (typeof o !== 'function') return; window[fn] = function () { const r = o.apply(this, arguments); try { lockBoxes(); } catch (e) { console.warn('[deliveries] lock', e && e.message); } return r; }; });
   const FRENDER = { samsung: () => renderForecast(computeModels(getEntries()), 'samsung'), philips: () => renderForecast(computePhilipsModels(phGetEntries()), 'philips'), plocks: () => renderPlocksForecast(computePlocksModels(plGetEntries())) };
