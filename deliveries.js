@@ -6,7 +6,8 @@
 // Storage: one row per brand in the existing Supabase table incoming_stock (brand = samsung_pipeline / philips_pipeline / plocks_pipeline,
 // data = {v, lines, meta}); the old Incoming boxes use the brand = samsung / philips / plocks rows and are not touched. Every save re-reads the
 // row, applies the one change to the fresh copy and writes it back only if nobody else saved in between, so two people cannot overwrite each other.
-// To undo: remove this script tag (the board falls back to the old Incoming boxes).
+// The old Weekly Forecast card reads these deliveries too, and its Incoming boxes are locked (see the section near the end of this file).
+// To undo: remove this script tag (the board and the old card fall back to the old Incoming boxes, which are unchanged).
 (function () {
   if (window.PSI_PIPELINE) return;
   const OWNER = 'Avin Karadaky', STALE_DAYS = 7;
@@ -330,6 +331,37 @@
       };
     } catch (e) { console.warn('[deliveries] could not install for ' + k + ':', e && e.message); }
   });
+  // ---------------- the old Weekly Forecast card reads the deliveries too ----------------
+  // The card (and the Total chart in forecast-plus.js) read their Incoming figures from localStorage <brand>_incoming_v1. Those reads now get the deliveries merged in, and the
+  // Incoming boxes are locked, so there is ONE place to enter arrivals: the Deliveries tab. Models with a delivery line use the lines; the old store itself is never changed
+  // (writes to those three keys are ignored, because the merged view must never be saved back into it).
+  const INC_KEYS = { samsung_incoming_v1: 'samsung', philips_incoming_v1: 'philips', plocks_incoming_v1: 'plocks' };
+  const isInc = key => typeof key === 'string' && Object.prototype.hasOwnProperty.call(INC_KEYS, key);
+  const origGet = Storage.prototype.getItem, origSet = Storage.prototype.setItem;
+  Storage.prototype.getItem = function (key) {
+    const v = origGet.apply(this, arguments);
+    if (this !== window.localStorage || !isInc(key)) return v;
+    try {
+      const k = INC_KEYS[key], lines = live(k); if (!lines.length) return v;
+      const arr = arrivalsFrom(S[k].lines, new Date()), merged = Object.assign({}, JSON.parse(v || '{}'));
+      new Set(lines.map(l => l.model)).forEach(n => { merged[n] = arr[n] || {}; });
+      return JSON.stringify(merged);
+    } catch (e) { return v; }
+  };
+  Storage.prototype.setItem = function (key) { if (this === window.localStorage && isInc(key)) return; return origSet.apply(this, arguments); };
+  function lockBoxes() {
+    const t = new Date();
+    document.querySelectorAll('.fc-incoming-input').forEach(i => {
+      if (i.disabled) return; i.disabled = true; i.style.cursor = 'not-allowed'; i.style.opacity = i.value ? '1' : '0.45';
+      const k = i.dataset.brand, ls = (k && S[k] ? live(k) : []).filter(l => { const f = info(l, t); return l.model === i.dataset.model && f.open && !f.overdue && f.eff && wkKey(f.eff) === i.dataset.week; });
+      i.title = ls.length ? ls.map(l => (l.po || 'No PO') + ': ' + l.qty + ' (' + l.status + '), ' + fmtDate(parseD(l.revised || l.due))).join('\n') : 'Locked: incoming stock now comes from the Deliveries tab.';
+    });
+    document.querySelectorAll('.card *, [id$="ForecastSection"] *').forEach(e => { if (e.children.length === 0 && /Enter expected incoming stock/.test(e.textContent)) e.textContent = '\uD83D\uDCE6 Incoming stock comes from the Deliveries tab and is read-only here. To change an arrival, edit its delivery on the Deliveries tab.'; });
+  }
+  ['renderForecast', 'renderPlocksForecast'].forEach(fn => { const o = window[fn]; if (typeof o !== 'function') return; window[fn] = function () { const r = o.apply(this, arguments); try { lockBoxes(); } catch (e) { console.warn('[deliveries] lock', e && e.message); } return r; }; });
+  const FRENDER = { samsung: () => renderForecast(computeModels(getEntries()), 'samsung'), philips: () => renderForecast(computePhilipsModels(phGetEntries()), 'philips'), plocks: () => renderPlocksForecast(computePlocksModels(plGetEntries())) };
+  const FVIEW = { samsung: 'view-forecast', philips: 'pview-pforecast', plocks: 'plview-plforecast' };
+  listeners.push(() => Object.keys(FRENDER).forEach(k => { const v = document.getElementById(FVIEW[k]); if (v && v.offsetParent !== null) { try { FRENDER[k](); } catch (e) { console.warn('[deliveries] redraw forecast', e && e.message); } } }));
   listeners.push(() => Object.keys(cfgs).forEach(k => { const v = document.getElementById(cfgs[k].id); if (v && v.offsetParent !== null) render(k); }));
   try { if (localStorage.getItem('undefined')) localStorage.removeItem('undefined'); } catch (e) {}   // the page's old Incoming loader saves every row it does not know under the key "undefined"; clear that junk
   const clean = () => { try { localStorage.removeItem('undefined'); } catch (e) {} };   // the old loader re-creates it after every load
