@@ -7,6 +7,7 @@
 //  - Samsung header: the same header as Philips Safes / Locks (badge + name + weeks line) on all four tabs.
 //  - Philips Locks header line says "60-Day Validity" like the other two (it said "60-Day Lead").
 //  - Tabs under the brand bar: equal width (150 px), same flat look as the brand tabs (underline in the brand colour, no pill), with an icon each.
+//  - Narrow screens: the brand bar and the sub-tabs no longer collide (words drop out first), and the Inventory Trend chart no longer widens the page.
 //  - Brand colour on every tab: inside each brand the page's accent colour (--mac-accent / --mac-accent-bg) is the
 //    brand's own colour, so Weekly Entry and Full History pick it up (Save buttons, week-filter buttons, month
 //    headers, + New, focus rings). The I (Inventory) column keeps its blue on purpose: it is the data colour code
@@ -51,6 +52,31 @@
   .sub-toolbar .seg-control button.seg-btn svg { width: 16px; height: 16px; flex: none; opacity: 0.85; }
   .sub-toolbar .seg-control button.seg-btn.active svg { color: var(--rd-brand, var(--mac-accent)); opacity: 1; }
   @media (max-width: 760px) { .sub-toolbar .seg-control button.seg-btn { flex: 1 1 0; min-width: 0; padding: 0 4px; gap: 5px; font-size: 12px; } }
+  /* Narrow screens: the brand bar drops words before it drops anything else (app title, user name, "PSI", the Live text), then the tab names; the
+     four sub-tabs share the width, and on a phone the sub-bar wraps so the Add Week button gets its own row. */
+  @media (max-width: 760px) {
+    .brand-bar { padding: 0 10px; }
+    .brand-bar .rd-app { padding: 0 10px 0 0; margin-right: 4px; }
+    .brand-bar .rd-app span, .brand-bar .rd-user span, .brand-bar .brand-tab span { display: none; }
+    .brand-bar .brand-right { gap: 6px; }
+    .brand-bar .rd-user { margin-right: 4px; }
+    .brand-bar .brand-right .mac-badge { font-size: 0; gap: 0; padding: 6px 8px; }
+    .sub-toolbar { padding-left: 8px; padding-right: 8px; }
+    .sub-toolbar .seg-control { flex: 1 1 auto; min-width: 0; }
+  }
+  @media (max-width: 520px) {
+    .brand-bar .brand-tab { font-size: 0; justify-content: center; }
+    .brand-bar .brand-tab .brand-icon { font-size: 12px; }
+    .brand-bar .brand-right #psiSignOutBtn { padding: 4px 8px; font-size: 11px; }
+    .sub-toolbar .seg-control button.seg-btn { gap: 4px; padding: 0 2px; font-size: 11.5px; }
+    .sub-toolbar .seg-control button.seg-btn svg { width: 14px; height: 14px; }
+    .sub-toolbar > div:last-child > span { display: none; }
+  }
+  @media (max-width: 480px) {
+    .sub-toolbar { height: auto; flex-wrap: wrap; }
+    .sub-toolbar .seg-control { flex: 1 1 100%; height: 40px; }
+    .sub-toolbar > div:last-child { margin-left: auto; padding: 4px 0; }
+  }
   .rd-head .section-title, .rd-look .section-header .section-title { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
   .rd-head .section-sub, .rd-look .section-header .section-sub { font-size: 13px; margin-top: 2px; }
   .rd-head-tools input { height: 36px; min-width: 260px; box-sizing: border-box; border-radius: 8px; font-size: 13px; padding-left: 34px !important; background-repeat: no-repeat; background-position: 11px center; background-size: 15px 15px; }
@@ -80,7 +106,7 @@
   .rd-inv-body .mdl-item { font-size: 12.5px; padding: 3px 6px; }
   .rd-inv-body .mdl-item i { width: 9px; height: 9px; }
   .rd-inv-body .mdl-foot { font-size: 10.5px; line-height: 1.35; }
-  @media (max-width: 1150px) { .rd-inv-body { grid-template-columns: 1fr; } .rd-inv-body > .mdl-panel { border-left: 0; padding-left: 0; } }
+  @media (max-width: 1150px) { .rd-inv-body { grid-template-columns: minmax(0, 1fr); } .rd-inv-body > div { min-width: 0; } .rd-inv-body > .mdl-panel { border-left: 0; padding-left: 0; } }   /* minmax(0, 1fr): a plain 1fr cannot shrink below the chart's own width and pushed the page sideways */
   .rd-look .table-section .table-header { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
   .rd-look .table-header .card-title { font-size: 18px; font-weight: 600; }
   .rd-look .table-header > .ovl-tools { margin: 0 0 0 auto; padding: 0; border: 0; background: none; }
