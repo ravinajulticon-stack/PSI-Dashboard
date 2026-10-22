@@ -12,6 +12,7 @@
 //    (average miss and bias, 4 and 8 weeks ahead, by demand pattern and by week), new method against the current 8-week average.
 //  - Deliveries: when deliveries.js is loaded, the lines on the Deliveries tab (PO, quantity, original and revised date, status) supply the arrivals,
 //    with their delay shown on the board; models without a line still use the older Incoming boxes. Overdue lines are not counted.
+//  - Suggested Order is capped at CAP_DAYS (180) days of the model's normal demand, marked * on the board: one-off orders in the history otherwise inflate it.
 // Nothing here changes the Overview, Weekly Entry, Full History or the existing forecast card. To undo: remove this script tag.
 (function () {
   const BR = {
@@ -19,7 +20,7 @@
     philips: { name: 'Philips Safes', root: 'pview-pforecast', sw: 'switchPhilipsView', view: 'pforecast', lead: 45, box: 'brand-philips', section: 'philipsForecastSection', models: () => computePhilipsModels(phGetEntries()) },
     plocks: { name: 'Philips Locks', root: 'plview-plforecast', sw: 'switchPlocksView', view: 'plforecast', lead: 60, box: 'brand-plocks', section: 'plocksForecastSection', models: () => computePlocksModels(plGetEntries()) }
   };
-  const H = 14, MIN_UNITS = 15, OVERSTOCK_WEEKS = 26, CYCLE_WEEKS = 4;           // projection weeks, "real sales" threshold, overstock cover, order cycle
+  const H = 14, MIN_UNITS = 15, OVERSTOCK_WEEKS = 26, CYCLE_WEEKS = 4, CAP_DAYS = 180;           // projection weeks, "real sales" threshold, overstock cover, order cycle
   const SERVICE = { core: 0.9, other: 0.8 };                                      // chance of NOT running out: core models (80% of sales) / the rest
   // <pure>
   const sum = a => a.reduce((x, y) => x + y, 0);
@@ -57,7 +58,8 @@
     const likely = projectStock(invNow, rate, arr), cautious = projectStock(invNow, Math.max(rate, rate80), arr);
     const cover = rate > 0 ? invNow / rate : null;
     const risk = invNow <= 0 ? 100 : (wins.length ? Math.round(100 * wins.filter(w => w > invNow).length / wins.length) : null);
-    const target = pct(wins, svc) + CYCLE_WEEKS * rate, net = invNow + onOrder, suggest = Math.max(0, Math.ceil(target - net));
+    const target = pct(wins, svc) + CYCLE_WEEKS * rate, net = invNow + onOrder, suggestRaw = Math.max(0, Math.ceil(target - net));
+    const capUnits = rate > 0 ? Math.max(0, Math.floor(CAP_DAYS / 7 * rate - net)) : Infinity, suggest = Math.min(suggestRaw, capUnits), capped = suggest < suggestRaw;   // never suggest more than 180 days of normal demand: one-off orders in the history otherwise inflate it
     let action;
     if (pattern === 'Low Volume') action = 'Low Volume';
     else if (isNew) action = (cover !== null && cover >= OVERSTOCK_WEEKS && likely.firstShort === null) ? 'Overstock' : 'New Model';   // a new model sitting on 26+ weeks of stock is still overstock
@@ -66,7 +68,7 @@
     else if ((risk !== null && risk >= 20) || (cover !== null && cover < 1.5 * L)) action = 'Watch';
     else action = 'OK';
     if (action === 'Watch' && !nextArr && likely.firstShort === null && risk >= 50) action = 'Order Now';
-    return { name: m.name, pattern, invNow, rate, rate80, cover, p50, p80, p90, risk, svc, suggest, onOrder, nextArr, arr, likely, cautious, action, tot, L, W, isNew, emptyWeeks, prelaunch, series, isCore };
+    return { name: m.name, pattern, invNow, rate, rate80, cover, p50, p80, p90, risk, svc, suggest, suggestRaw, capped, onOrder, nextArr, arr, likely, cautious, action, tot, L, W, isNew, emptyWeeks, prelaunch, series, isCore };
   }
   function patternOf(s, valid, tot) {                                            // same split as analyse(): smooth / erratic / intermittent / lumpy
     const nz = s.filter((v, i) => valid[i] && v > 0), vals = s.filter((v, i) => valid[i]);
@@ -194,7 +196,7 @@
     add('Deliveries Entered', a.dl && a.dl.length ? a.dl.map(x => (x.po ? x.po + ': ' : '') + x.qty + ' on ' + PP.fmtDate(x.eff) + (x.overdue ? ' (Overdue, Not Counted)' : (x.delay > 0 ? ' (' + x.delay + ' Days Late)' : ''))).join('; ') : (a.onOrder > 0 ? Object.keys(a.arr).map(Number).sort((x, y) => x - y).map(t => wkLabel(latestNum + t) + ': ' + a.arr[t]).join(', ') : 'None'));
     add('Weeks Left Out Of The Estimate', a.emptyWeeks + ' Empty Shelf, ' + a.prelaunch + ' Before Launch');
     add('Weeks Of History', a.series.length + (a.isNew ? ' (Short: Treat With Care)' : ''));
-    if (a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action)) add('Suggested Order', a.suggest + ' Units (' + Math.round(a.svc * 100) + '% Cover + ' + CYCLE_WEEKS + ' Weeks)');
+    if (a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action)) add('Suggested Order', a.suggest + ' Units (' + Math.round(a.svc * 100) + '% Cover + ' + CYCLE_WEEKS + ' Weeks)' + (a.capped ? '. Capped At ' + CAP_DAYS + ' Days Of Cover, Uncapped ' + a.suggestRaw : ''));
     const left = el('div'); left.appendChild(kv);
     const right = el('div'); const box = el('div', 'sr-chartbox'); const cv = el('canvas'); box.appendChild(cv); right.appendChild(box);
     g.appendChild(left); g.appendChild(right); td.appendChild(g); tr.appendChild(td);
@@ -283,13 +285,13 @@
       if (late) nx.title = 'Running ' + a.nextLine.delay + ' days late'; if (od) nx.title = 'The date has passed and it is not marked Arrived, so it is not counted. Update it on the Deliveries tab.';
       cell(a.nextArr || a.likely.empty === 0 ? (a.likely.empty ? String(a.likely.empty) : '0') : '\u2014', a.likely.empty > 0 ? 'sr-bad' : 'sr-dim');
       cell(a.risk == null ? '\u2014' : a.risk + '%', a.risk >= 50 ? 'sr-bad' : (a.risk == null ? 'sr-dim' : null));
-      cell(a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action) ? String(a.suggest) : '\u2014', a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action) ? null : 'sr-dim');
+      const sgc = cell(a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action) ? String(a.suggest) + (a.capped ? '*' : '') : '\u2014', a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action) ? null : 'sr-dim'); if (a.capped) sgc.title = 'Capped at ' + CAP_DAYS + ' days of cover. Uncapped: ' + a.suggestRaw;
       const ac = el('td'); const chip = el('span', 'sr-act', a.action); chip.style.setProperty('--c', COL[a.action]); ac.appendChild(chip); tr.appendChild(ac);
       tr.addEventListener('click', () => { st.open = st.open === a.name ? null : a.name; render(k); });
       tb.appendChild(tr); if (st.open === a.name) tb.appendChild(detailRow(k, a, latestNum));
     });
     tbl.appendChild(tb); wrap.appendChild(tbl); host.appendChild(wrap);
-    host.appendChild(el('div', 'sr-foot', 'Indicative only. Built from ' + (list[0] ? list[0].series.length : 0) + ' or fewer weeks of history, so lumpy models stay hard to predict (the back-test missed by 66% to 80% on them): use the range, not a single date. Click a model for its range and projection. Core models (80% of units sold) are planned at 90% cover, the rest at 80%.'));
+    host.appendChild(el('div', 'sr-foot', 'Indicative only. Built from ' + (list[0] ? list[0].series.length : 0) + ' or fewer weeks of history, so lumpy models stay hard to predict (the back-test missed by 66% to 80% on them): use the range, not a single date. Click a model for its range and projection. Core models (80% of units sold) are planned at 90% cover, the rest at 80%. A suggested order is capped at ' + CAP_DAYS + ' days of cover (marked *), because one-off orders in the history can inflate it.'));
     accuracyBlock(k, host);
   }
   function refreshVisible() { Object.keys(BR).forEach(k => { const r = document.getElementById(BR[k].root); if (r && r.offsetParent !== null) { try { render(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } } }); }
