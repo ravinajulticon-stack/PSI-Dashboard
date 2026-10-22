@@ -79,7 +79,7 @@
   .sr-title { font-size: 16px; font-weight: 600; color: var(--mac-text); }
   .sr-sub { font-size: 11.5px; color: var(--mac-text2); margin-top: 3px; }
   .sr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .sr-chip { font: inherit; font-size: 11.5px; font-weight: 600; padding: 4px 11px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; background: color-mix(in srgb, var(--c) 16%, transparent); color: var(--c); }
+  .sr-chip { font: inherit; font-size: 11.5px; font-weight: 600; width: 112px; padding: 4px 0; box-sizing: border-box; text-align: center; white-space: nowrap; border-radius: 999px; border: 1px solid transparent; cursor: pointer; background: color-mix(in srgb, var(--c) 16%, transparent); color: var(--c); }
   .sr-chip.on { border-color: var(--c); }
   .sr-chip.zero { opacity: 0.45; }
   .sr-note { font-size: 11.5px; color: var(--mac-text2); background: color-mix(in srgb, var(--mac-orange) 12%, transparent); border-radius: 8px; padding: 7px 11px; margin: 10px 0 8px; }
@@ -92,7 +92,7 @@
   .sr-table tbody tr.sr-row:hover { background: color-mix(in srgb, var(--mac-text) 5%, transparent); }
   .sr-name { font-weight: 600; } .sr-pat { font-size: 10.5px; color: var(--mac-text3); margin-left: 6px; font-weight: 400; }
   .sr-dim { color: var(--mac-text3); } .sr-bad { color: var(--mac-red); font-weight: 600; }
-  .sr-act { display: inline-block; min-width: 76px; text-align: center; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--c); }
+  .sr-act { display: inline-block; width: 88px; box-sizing: border-box; text-align: center; white-space: nowrap; font-size: 11px; font-weight: 700; padding: 3px 0; border-radius: 999px; background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--c); }
   .sr-detail td { text-align: left; white-space: normal; background: color-mix(in srgb, var(--mac-text) 3%, transparent); padding: 14px 16px; }
   .sr-dgrid { display: grid; grid-template-columns: minmax(250px, 1fr) minmax(0, 1.6fr); gap: 18px; align-items: start; }
   .sr-kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 12px; }
