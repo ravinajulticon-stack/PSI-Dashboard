@@ -66,14 +66,14 @@
     try { const r = await fetch(rowUrl(k) + '&select=data', { headers: SH }); if (!r.ok) throw new Error('HTTP ' + r.status); const rows = await r.json(); if (adopt(k, rows[0] && rows[0].data)) notify(); }
     catch (e) { console.warn('[deliveries] load ' + k + ':', e && e.message); }
   }
-  async function mutate(k, fn) {
-    if (offline) { S[k].lines = fn(S[k].lines.map(x => Object.assign({}, x))); S[k].meta = { updatedAt: new Date().toISOString(), updatedBy: who() }; S[k].sig = null; notify(); return; }
+  async function mutate(k, fn, metaExtra) {
+    if (offline) { S[k].lines = fn(S[k].lines.map(x => Object.assign({}, x))); S[k].meta = Object.assign({ updatedAt: new Date().toISOString(), updatedBy: who() }, metaExtra || {}); S[k].sig = null; notify(); return; }
     for (let attempt = 0; attempt < 4; attempt++) {
       const r = await fetch(rowUrl(k) + '&select=data,updated_at', { headers: SH }); if (!r.ok) throw new Error('Could not read the saved deliveries (HTTP ' + r.status + ').');
       const row = (await r.json())[0]; if (!row) throw new Error('The deliveries row is missing in the database.');
       const cur = row.data && Array.isArray(row.data.lines) ? row.data.lines : [], cutoff = Date.now() - 30 * DAY;
       const next = fn(cur.map(x => Object.assign({}, x))).filter(l => !(l.deleted && Date.parse(l.updatedAt) < cutoff));
-      const now = new Date().toISOString(), data = { v: 1, lines: next, meta: { updatedAt: now, updatedBy: who() } };
+      const now = new Date().toISOString(), data = { v: 1, lines: next, meta: Object.assign({ updatedAt: now, updatedBy: who() }, metaExtra || {}) };
       const p = await fetch(rowUrl(k) + '&updated_at=eq.' + encodeURIComponent(row.updated_at), { method: 'PATCH', headers: Object.assign({}, SH, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ data, updated_at: now }) });
       if (!p.ok) throw new Error('Could not save (HTTP ' + p.status + ').');
       const saved = await p.json(); if (saved.length === 1) { adopt(k, saved[0].data); notify(); return; }
@@ -84,11 +84,12 @@
   const stamp = l => Object.assign(l, { updatedAt: new Date().toISOString(), updatedBy: who() });
   const save = (k, line) => mutate(k, lines => { const rec = stamp(Object.assign({}, line, { id: line.id || newId() })), i = lines.findIndex(x => x.id === rec.id); if (i >= 0) lines[i] = rec; else lines.push(rec); return lines; });
   const remove = (k, id) => mutate(k, lines => lines.map(x => x.id === id ? stamp(Object.assign({}, x, { deleted: true })) : x));
+  const confirmList = (k, none) => mutate(k, lines => lines, none ? { confirmed: 'none' } : null);   // stamps the list as checked today without changing a line; 'none' records that nothing is on order
   const live = k => S[k].lines.filter(l => !l.deleted);
   const P = window.PSI_PIPELINE = {
     lines: k => live(k).map(l => Object.assign({}, l)), meta: k => S[k].meta, loaded: k => S[k].loaded, info: l => info(l, new Date()),
     arrivals: k => arrivalsFrom(S[k].lines, new Date()), models: k => new Set(live(k).map(l => l.model)), refresh: load, onChange: f => listeners.push(f),
-    save, remove, isoWeek, wkKey, fmtDate, parseD, daysBetween, who, openReport, setOffline: v => { offline = !!v; }, owner: OWNER, staleDays: STALE_DAYS, cfgs
+    save, remove, confirmList, isoWeek, wkKey, fmtDate, parseD, daysBetween, who, openReport, setOffline: v => { offline = !!v; }, owner: OWNER, staleDays: STALE_DAYS, cfgs
   };
   // ---------------- styles ----------------
   const css = document.createElement('style'); css.id = 'psi-deliveries';
@@ -186,10 +187,13 @@
     host.textContent = ''; if (k === 'samsung') refreshHeader(host); const wrap = el('div', 'dl-wrap'), st = stats(k), t = today(), meta = S[k].meta;
     const head = el('div', 'dl-head'), title = el('div', 'dl-title'); title.appendChild(el('h2', null, 'Deliveries On Order')); head.appendChild(title);
     const btns = el('div', 'dl-btns'), add = el('button', 'dl-btn primary', '+ Add Delivery'), rep = el('button', 'dl-btn', 'Weekly Supply Report'); add.type = rep.type = 'button';
-    add.addEventListener('click', () => openModal(k, null)); rep.addEventListener('click', () => openReport(k)); btns.appendChild(rep); btns.appendChild(add); head.appendChild(btns); wrap.appendChild(head);
+    const hasOpen = live(k).some(l => info(l, t).open), confLabel = hasOpen ? 'Confirm List Is Current' : 'Confirm Nothing On Order', conf = el('button', 'dl-btn', confLabel); conf.type = 'button';
+    conf.title = hasOpen ? 'Stamps the list as checked today without changing any delivery' : 'Records that nothing is on order for this brand, so the board and the report say so instead of "no deliveries entered"';
+    conf.addEventListener('click', async () => { conf.disabled = true; conf.textContent = 'Saving...'; try { await confirmList(k, !hasOpen); } catch (e) { alert(String(e && e.message || e)); conf.disabled = false; conf.textContent = confLabel; } });
+    add.addEventListener('click', () => openModal(k, null)); rep.addEventListener('click', () => openReport(k)); btns.appendChild(conf); btns.appendChild(rep); btns.appendChild(add); head.appendChild(btns); wrap.appendChild(head);
     wrap.appendChild(el('div', 'dl-sub', 'Purchase-order lines on the way. Owner: ' + OWNER + '. The Supply Risk Board and the Weekly Supply Report use these dates.'));
     const age = meta && meta.updatedAt ? daysBetween(new Date(meta.updatedAt), t) : null, stale = age === null ? st.ls.length > 0 || true : age > STALE_DAYS;
-    const fresh = el('div', 'dl-fresh' + (stale ? ' stale' : ''), age === null ? 'No deliveries have been saved yet. ' + OWNER + ' keeps this list; until it is filled in, the board treats every model as having nothing on order.' : 'Last updated ' + ageText(meta.updatedAt, t) + ' (' + fmtDate(new Date(meta.updatedAt)) + ') by ' + (meta.updatedBy || 'Unknown') + (age > STALE_DAYS ? '. It has not been updated for ' + age + ' days: check the dates with ' + OWNER + '.' : '.'));
+    const fresh = el('div', 'dl-fresh' + (stale ? ' stale' : ''), meta && meta.confirmed === 'none' && !st.open.length ? 'Nothing is on order. Confirmed ' + ageText(meta.updatedAt, t) + ' (' + fmtDate(new Date(meta.updatedAt)) + ') by ' + (meta.updatedBy || 'Unknown') + (age > STALE_DAYS ? '. That was ' + age + ' days ago: confirm again, or add a delivery if one has been placed.' : '.') : age === null ? 'No deliveries have been saved yet. ' + OWNER + ' keeps this list; until it is filled in, the board treats every model as having nothing on order.' : 'Last updated ' + ageText(meta.updatedAt, t) + ' (' + fmtDate(new Date(meta.updatedAt)) + ') by ' + (meta.updatedBy || 'Unknown') + (age > STALE_DAYS ? '. It has not been updated for ' + age + ' days: check the dates with ' + OWNER + '.' : '.'));
     wrap.appendChild(fresh);
     const kp = el('div', 'dl-kpis'), tile = (n, label, bad) => { const d = el('div', 'dl-kpi' + (bad ? ' bad' : '')); d.appendChild(el('b', null, n)); d.appendChild(el('span', null, label)); kp.appendChild(d); };
     tile(String(st.open.length), 'Open Deliveries (' + st.openUnits.toLocaleString() + ' Units)'); tile(st.next4.toLocaleString(), 'Units Due In The Next 4 Weeks');
@@ -221,7 +225,7 @@
       mk('Edit', () => openModal(k, l)); if (i.open) mk('Arrived', () => act(k, () => save(k, Object.assign({}, l, { status: 'Arrived', arrivedOn: toIso(t) }))));
       const rm = mk('Remove', () => { if (rm.dataset.sure) { act(k, () => remove(k, l.id)); } else { rm.dataset.sure = '1'; rm.textContent = 'Sure?'; setTimeout(() => { if (rm.isConnected) { delete rm.dataset.sure; rm.textContent = 'Remove'; } }, 3000); } }, 'danger'); tr.appendChild(a); tb.appendChild(tr);
     });
-    empty.textContent = list.length ? '' : (live(k).length ? 'Nothing matches this filter.' : 'No deliveries entered yet. Click Add Delivery to enter the first purchase-order line. ' + OWNER + ' owns this list.');
+    empty.textContent = list.length ? '' : (live(k).length ? 'Nothing matches this filter.' : (S[k].meta && S[k].meta.confirmed === 'none' ? 'Nothing is on order for this brand (confirmed ' + fmtDate(new Date(S[k].meta.updatedAt)) + '). Add a delivery when one is placed.' : 'No deliveries entered yet. Click Add Delivery to enter the first purchase-order line. ' + OWNER + ' owns this list.'));
   }
   async function act(k, fn) { try { await fn(); } catch (e) { alert(String(e && e.message || e)); } }
   function openModal(k, line) {
