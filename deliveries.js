@@ -170,8 +170,8 @@
     const units = a => a.reduce((s, x) => s + (+x.l.qty || 0), 0), delayed = open.filter(x => x.i.delay > 0), overdue = open.filter(x => x.i.overdue);
     return { ls, open, openUnits: units(open), next4: units(open.filter(x => !x.i.overdue && x.i.daysOut <= 28)), delayed, avgDelay: delayed.length ? Math.round(delayed.reduce((s, x) => s + x.i.delay, 0) / delayed.length) : 0, overdue };
   }
-  // Samsung's tabs each carry their own brand header (badge, brand name, weeks line); Locks and Safes show one shared header above every tab. So on Samsung the Deliveries and
-  // Forecast tabs borrow the very same block from the Weekly Entry tab, so they look like the rest.
+  // Samsung's tabs each carry their own brand header (badge, brand name, weeks line); Locks and Safes show one shared header above every tab. So on Samsung the Deliveries tab
+  // borrows the very same block from the Weekly Entry tab, so it looks like the rest. Samsung's Forecast tab already has its own header: do NOT add one there.
   function refreshHeader(view) {
     if (!view) return; const old = view.querySelector(':scope > [data-dl-head]'); if (old) old.remove();
     const src = document.querySelector('#view-entry > .section-header > div'); if (!src) return;
@@ -338,7 +338,6 @@
       window[c.sw] = function (name) {
         const r = original.apply(this, arguments);
         if (c.sw === 'switchPlocksView') view.style.display = name === c.view ? 'block' : 'none';   // Philips Locks' switcher only knows its own views
-        if (k === 'samsung' && name === 'forecast') refreshHeader(document.getElementById('view-forecast'));
         if (name === c.view) setTimeout(() => { try { render(k); load(k); } catch (e) { console.warn('[deliveries] render', e && e.message); } }, 0);
         return r;
       };
