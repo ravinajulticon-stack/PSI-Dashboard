@@ -167,11 +167,21 @@
     const units = a => a.reduce((s, x) => s + (+x.l.qty || 0), 0), delayed = open.filter(x => x.i.delay > 0), overdue = open.filter(x => x.i.overdue);
     return { ls, open, openUnits: units(open), next4: units(open.filter(x => !x.i.overdue && x.i.daysOut <= 28)), delayed, avgDelay: delayed.length ? Math.round(delayed.reduce((s, x) => s + x.i.delay, 0) / delayed.length) : 0, overdue };
   }
+  // Samsung's tabs each carry their own brand header (badge, brand name, weeks line); Locks and Safes show one shared header above every tab. So on Samsung the Deliveries and
+  // Forecast tabs borrow the very same block from the Weekly Entry tab, so they look like the rest.
+  function refreshHeader(view) {
+    if (!view) return; const old = view.querySelector(':scope > [data-dl-head]'); if (old) old.remove();
+    const src = document.querySelector('#view-entry > .section-header > div'); if (!src) return;
+    const h = document.createElement('div'); h.className = 'section-header'; h.setAttribute('data-dl-head', '1');
+    const left = src.cloneNode(true); left.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+    const meta = document.getElementById('dashboardMeta'), sub = left.querySelector('.section-sub'); if (meta && sub && meta.textContent.trim()) sub.textContent = meta.textContent.trim();
+    h.appendChild(left); view.insertBefore(h, view.firstChild);
+  }
   // ---------------- the screen ----------------
   function render(k) {
     const c = cfgs[k], host = document.getElementById(c.id); if (!host) return;
     const brandCol = getComputedStyle(document.getElementById(c.box)).getPropertyValue('--rd-brand').trim(); if (brandCol) host.style.setProperty('--rd-brand', brandCol);
-    host.textContent = ''; const wrap = el('div', 'dl-wrap'), st = stats(k), t = today(), meta = S[k].meta;
+    host.textContent = ''; if (k === 'samsung') refreshHeader(host); const wrap = el('div', 'dl-wrap'), st = stats(k), t = today(), meta = S[k].meta;
     const head = el('div', 'dl-head'), title = el('div', 'dl-title'); title.appendChild(el('h2', null, 'Deliveries On Order')); head.appendChild(title);
     const btns = el('div', 'dl-btns'), add = el('button', 'dl-btn primary', '+ Add Delivery'), rep = el('button', 'dl-btn', 'Weekly Supply Report'); add.type = rep.type = 'button';
     add.addEventListener('click', () => openModal(k, null)); rep.addEventListener('click', () => openReport(k)); btns.appendChild(rep); btns.appendChild(add); head.appendChild(btns); wrap.appendChild(head);
@@ -314,6 +324,7 @@
       window[c.sw] = function (name) {
         const r = original.apply(this, arguments);
         if (c.sw === 'switchPlocksView') view.style.display = name === c.view ? 'block' : 'none';   // Philips Locks' switcher only knows its own views
+        if (k === 'samsung' && name === 'forecast') refreshHeader(document.getElementById('view-forecast'));
         if (name === c.view) setTimeout(() => { try { render(k); load(k); } catch (e) { console.warn('[deliveries] render', e && e.message); } }, 0);
         return r;
       };
