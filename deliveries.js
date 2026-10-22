@@ -10,6 +10,17 @@
 (function () {
   if (window.PSI_PIPELINE) return;
   const OWNER = 'Avin Karadaky', STALE_DAYS = 7;
+  // What each department sees in the Weekly Supply Report: which sections, in what order, and a one-line focus. EDIT HERE to change a department's report.
+  const DEPTS = {
+    '': { sections: ['act', 'due', 'late', 'over'], focus: '' },
+    'Sales': { sections: ['act', 'due', 'late'], focus: 'Models likely to run out, when stock comes back, and deliveries running late.' },
+    'Finance': { sections: ['act', 'due', 'late', 'over'], focus: 'Orders to place, deliveries expected, late deliveries, and the stock tying up cash.' },
+    'Executive': { sections: ['act', 'due', 'late', 'over'], focus: 'The full picture: what needs action, what is arriving, what is late and what is overstocked.' },
+    'CS & Installation': { sections: ['late', 'due', 'act'], focus: 'Late deliveries and arrivals that affect units and parts for installs, and what is about to run out.' },
+    'General Management': { sections: ['act', 'due', 'late', 'over'], focus: 'The full picture: what needs action, what is arriving, what is late and what is overstocked.' },
+    'Marketing': { sections: ['over', 'due', 'act'], focus: 'Overstocked models to push, arrivals to plan around, and models to avoid promoting.' }
+  };
+  const DEPT_NAMES = ['Sales', 'Finance', 'Executive', 'CS & Installation', 'General Management', 'Marketing'];
   const ROW = { samsung: 'samsung_pipeline', philips: 'philips_pipeline', plocks: 'plocks_pipeline' };
   const CACHE_KEY = 'psi_pipeline_cache_v1', STATUSES = ['On Order', 'In Transit', 'Arrived', 'Cancelled'], OPEN = ['On Order', 'In Transit'];
   // <pure>
@@ -244,38 +255,50 @@
     });
     d.due.sort((a, b) => a.eff - b.eff); d.late.sort((a, b) => (b.overdue - a.overdue) || (b.delay - a.delay)); return d;
   }
-  function reportText(d, prepFor) {
-    const L = ['WEEKLY SUPPLY REPORT' + (prepFor ? ' - ' + prepFor : ''), d.ks.map(k => cfgs[k].name).join(', ') + ' | ' + d.week + ' | Prepared ' + fmtDate(d.t) + (d.latest ? ' | Data through ' + d.latest : ''), ''];
-    L.push('Order Now ' + d.counts['Order Now'] + ' | Expedite ' + d.counts['Expedite'] + ' | Watch ' + d.counts['Watch'] + ' | Overstock ' + d.counts['Overstock'] + ' | Open deliveries ' + d.open + ' (' + d.units.toLocaleString() + ' units)', '');
-    L.push('NEEDS ACTION NOW'); if (!d.act.length) L.push('  Nothing needs action.'); d.act.slice(0, 12).forEach(r => L.push('  ' + r.name + ': ' + r.onHand + ' on hand, ' + (r.cover == null ? 'n/a' : Math.round(r.cover * 10) / 10) + ' wks cover, out ' + r.out + ', next arrival ' + r.next + (r.suggest > 0 ? ', suggest ordering ' + r.suggest : '') + ' [' + r.action + ']')); L.push('');
-    L.push('DELIVERIES DUE IN THE NEXT 4 WEEKS'); if (!d.due.length) L.push('  None entered.'); d.due.slice(0, 12).forEach(r => L.push('  ' + r.name + ' ' + (r.po ? r.po + ' ' : '') + ': ' + r.qty + ' units, ' + fmtDate(r.eff) + (r.delay > 0 ? ' (' + r.delay + ' days late)' : ''))); L.push('');
-    L.push('LATE OR OVERDUE DELIVERIES'); if (!d.late.length) L.push('  None.'); d.late.slice(0, 12).forEach(r => L.push('  ' + r.name + ' ' + (r.po ? r.po + ' ' : '') + ': ' + r.qty + ' units, ' + (r.overdue ? 'overdue (was ' + fmtDate(r.due) + ')' : r.delay + ' days late, now ' + fmtDate(r.eff)) + ' - ' + r.impact)); L.push('');
-    L.push('OVERSTOCK WATCH'); if (!d.over.length) L.push('  None.'); d.over.slice(0, 5).forEach(r => L.push('  ' + r.name + ': ' + r.onHand + ' on hand' + (r.cover == null ? '' : ', ' + (r.cover >= 100 ? '100+' : Math.round(r.cover * 10) / 10) + ' wks cover'))); L.push('');
-    L.push('Deliveries owner: ' + OWNER + (d.metas.length ? '. Last updated ' + d.metas.map(x => cfgs[x.k].name + ' ' + fmtDate(new Date(x.m.updatedAt))).join(', ') : '. No deliveries saved yet') + '. Indicative only: built from the weekly history; arrivals count only what is entered on the Deliveries tab.'); return L.join('\n');
+  function reportText(d, dept) {
+    const cfg = DEPTS[dept] || DEPTS[''], N = x => (x.cover == null ? 'n/a' : (x.cover >= 100 ? '100+' : Math.round(x.cover * 10) / 10)), L = [];
+    L.push('WEEKLY SUPPLY REPORT' + (dept ? ' - ' + dept : ''), d.ks.map(k => cfgs[k].name).join(', ') + ' | ' + d.week + ' | Prepared ' + fmtDate(d.t) + (d.latest ? ' | Data through ' + d.latest : ''));
+    if (cfg.focus) L.push('Focus: ' + cfg.focus);
+    L.push('', 'Order Now ' + d.counts['Order Now'] + ' | Expedite ' + d.counts['Expedite'] + ' | Watch ' + d.counts['Watch'] + ' | Overstock ' + d.counts['Overstock'] + ' | Open deliveries ' + d.open + ' (' + d.units.toLocaleString() + ' units)', '');
+    const parts = {
+      act: () => { L.push('NEEDS ACTION NOW'); if (!d.act.length) L.push('  Nothing needs action.'); d.act.slice(0, 12).forEach(r => L.push('  ' + r.name + ': ' + r.onHand + ' on hand, ' + N(r) + ' wks cover, out ' + r.out + ', next arrival ' + r.next + (r.suggest > 0 ? ', suggest ordering ' + r.suggest : '') + ' [' + r.action + ']')); },
+      due: () => { L.push('DELIVERIES DUE IN THE NEXT 4 WEEKS'); if (!d.due.length) L.push('  None entered.'); d.due.slice(0, 12).forEach(r => L.push('  ' + r.name + ' ' + (r.po ? r.po + ' ' : '') + ': ' + r.qty + ' units, ' + fmtDate(r.eff) + (r.delay > 0 ? ' (' + r.delay + ' days late)' : ''))); },
+      late: () => { L.push('LATE OR OVERDUE DELIVERIES'); if (!d.late.length) L.push('  None.'); d.late.slice(0, 12).forEach(r => L.push('  ' + r.name + ' ' + (r.po ? r.po + ' ' : '') + ': ' + r.qty + ' units, ' + (r.overdue ? 'overdue (was ' + fmtDate(r.due) + ')' : r.delay + ' days late, now ' + fmtDate(r.eff)) + ' - ' + r.impact)); },
+      over: () => { L.push('OVERSTOCK WATCH'); if (!d.over.length) L.push('  None.'); d.over.slice(0, 5).forEach(r => L.push('  ' + r.name + ': ' + r.onHand + ' on hand' + (r.cover == null ? '' : ', ' + N(r) + ' wks cover'))); }
+    };
+    cfg.sections.forEach(k => { parts[k](); L.push(''); });
+    L.push('Deliveries owner: ' + OWNER + (d.metas.length ? '. Last updated ' + d.metas.map(x => cfgs[x.k].name + ' ' + fmtDate(new Date(x.m.updatedAt))).join(', ') : '. No deliveries saved yet') + '. Indicative only: built from the weekly history; arrivals count only what is entered on the Deliveries tab.');
+    return L.join('\n');
   }
   function openReport(k0) {
     const old = document.querySelector('.psi-rep-root'); if (old) old.remove();
     const root = el('div', 'psi-rep-root'), bar = el('div', 'psi-rep-bar'), page = el('div', 'psi-rep-page'); root.appendChild(bar); root.appendChild(page);
     const scope = el('select'); [['all', 'All Brands']].concat(Object.keys(cfgs).map(k => [k, cfgs[k].name])).forEach(([v, t]) => { const o = el('option', null, t); o.value = v; scope.appendChild(o); }); scope.value = k0 || 'all';
-    const who2 = el('input'); who2.type = 'text'; who2.placeholder = 'Prepared For (Optional)'; who2.style.width = '170px';
+    const who2 = el('select'); [''].concat(DEPT_NAMES).forEach(n => { const o = el('option', null, n || 'All Departments'); o.value = n; who2.appendChild(o); }); try { who2.value = localStorage.getItem('psi_report_dept_v1') || ''; } catch (e) {} if (who2.selectedIndex < 0) who2.value = '';
     const mkb = (t, fn) => { const b = el('button', 'dl-btn', t); b.type = 'button'; b.addEventListener('click', fn); return b; };
-    const lab = el('span', null, 'Scope:'); bar.appendChild(lab); bar.appendChild(scope); bar.appendChild(who2);
+    const lab = el('span', null, 'Scope:'); bar.appendChild(lab); bar.appendChild(scope); bar.appendChild(el('span', null, 'Department:')); bar.appendChild(who2);
     const copy = mkb('Copy As Text', async () => { try { await navigator.clipboard.writeText(reportText(reportData(scope.value), who2.value.trim())); copy.textContent = 'Copied'; setTimeout(() => { copy.textContent = 'Copy As Text'; }, 1800); } catch (e) { copy.textContent = 'Copy Failed'; } });
     bar.appendChild(copy); bar.appendChild(mkb('Print / Save As PDF', () => window.print())); bar.appendChild(mkb('Close', () => root.remove()));
     const table = (heads, body, numCols) => { const t = el('table'), h = el('tr'); heads.forEach((x, i) => h.appendChild(el('th', numCols.indexOf(i) >= 0 ? 'num' : null, x))); const th = el('thead'); th.appendChild(h); t.appendChild(th); const tb = el('tbody'); body.forEach(r => { const tr = el('tr'); r.forEach((c, i) => { const td = el('td', (numCols.indexOf(i) >= 0 ? 'num ' : '') + (c && c.cls ? c.cls : ''), c && c.t != null ? c.t : c); tr.appendChild(td); }); tb.appendChild(tr); }); t.appendChild(tb); return t; };
     const none = txt => el('div', 'rp-none', txt), more = (n, m) => n > m ? el('div', 'rp-sub', n - m + ' more in the dashboard.') : null;
+    const caps = n => n <= 3 ? { act: 10, due: 8, late: 8, over: 6 } : { act: 8, due: 6, late: 6, over: 3 };   // fewer sections, more rows each, still one A4 page
+    const cov = r => r.cover == null ? '\u2014' : (r.cover >= 100 ? '100+' : String(Math.round(r.cover * 10) / 10));
+    const secs = {
+      act: (d, cap) => { page.appendChild(el('h2', null, 'Needs Action Now')); if (!d.act.length) { page.appendChild(none('Nothing needs action this week.')); return; } page.appendChild(table(['Model', 'On Hand', 'Cover (Wks)', 'Stock-Out', 'Next Arrival', 'Suggested Order', 'Action'], d.act.slice(0, cap).map(r => [r.name, String(r.onHand), cov(r), r.out, r.next, r.suggest > 0 ? String(r.suggest) : '\u2014', { t: r.action, cls: r.action === 'Order Now' ? 'rp-red' : 'rp-amber' }]), [1, 2, 5])); const mm = more(d.act.length, cap); if (mm) page.appendChild(mm); },
+      due: (d, cap) => { page.appendChild(el('h2', null, 'Deliveries Due In The Next 4 Weeks')); if (!d.due.length) { page.appendChild(none('No deliveries are entered for the next 4 weeks.')); return; } page.appendChild(table(['Model', 'PO Number', 'Quantity', 'Due', 'Delay'], d.due.slice(0, cap).map(r => [r.name, r.po || '\u2014', String(r.qty), fmtDate(r.eff), r.delay > 0 ? { t: '+' + r.delay + ' days', cls: 'rp-red' } : '\u2014']), [2])); const mm = more(d.due.length, cap); if (mm) page.appendChild(mm); },
+      late: (d, cap) => { page.appendChild(el('h2', null, 'Late Or Overdue Deliveries')); if (!d.late.length) { page.appendChild(none('No late or overdue deliveries.')); return; } page.appendChild(table(['Model', 'PO Number', 'Quantity', 'Was', 'Now', 'What It Means'], d.late.slice(0, cap).map(r => [r.name, r.po || '\u2014', String(r.qty), fmtDate(r.due), r.overdue ? { t: 'Overdue', cls: 'rp-red' } : { t: fmtDate(r.eff) + ' (+' + r.delay + ' d)', cls: 'rp-amber' }, r.impact]), [2])); const mm = more(d.late.length, cap); if (mm) page.appendChild(mm); },
+      over: (d, cap) => { page.appendChild(el('h2', null, 'Overstock Watch')); if (!d.over.length) { page.appendChild(none('No overstocked models.')); return; } page.appendChild(table(['Model', 'On Hand', 'Cover (Wks)'], d.over.slice(0, cap).map(r => [r.name, String(r.onHand), cov(r)]), [1, 2])); const mm = more(d.over.length, cap); if (mm) page.appendChild(mm); }
+    };
     const draw = () => {
-      const d = reportData(scope.value); page.textContent = '';
-      page.appendChild(el('h1', null, 'Weekly Supply Report' + (who2.value.trim() ? ' \u2014 ' + who2.value.trim() : '')));
+      const d = reportData(scope.value), dept = who2.value, cfg = DEPTS[dept] || DEPTS[''], cap = caps(cfg.sections.length); page.textContent = '';
+      page.appendChild(el('h1', null, 'Weekly Supply Report' + (dept ? ' \u2014 ' + dept : '')));
       page.appendChild(el('div', 'rp-sub', d.ks.map(x => cfgs[x].name).join(', ') + '  |  ' + d.week + '  |  Prepared ' + fmtDate(d.t) + (d.latest ? '  |  Data Through ' + d.latest : '')));
+      if (cfg.focus) page.appendChild(el('div', 'rp-sub', 'Focus: ' + cfg.focus));
       const kp = el('div', 'rp-kpis'); [['Order Now', d.counts['Order Now']], ['Expedite', d.counts['Expedite']], ['Watch', d.counts['Watch']], ['Overstock', d.counts['Overstock']], ['Open Deliveries', d.open + ' (' + d.units.toLocaleString() + ')']].forEach(([l, v]) => { const x = el('div', 'rp-kpi'); x.appendChild(el('b', null, String(v))); x.appendChild(el('span', null, l)); kp.appendChild(x); }); page.appendChild(kp);
-      page.appendChild(el('h2', null, 'Needs Action Now')); if (!d.act.length) page.appendChild(none('Nothing needs action this week.')); else { page.appendChild(table(['Model', 'On Hand', 'Cover (Wks)', 'Stock-Out', 'Next Arrival', 'Suggested Order', 'Action'], d.act.slice(0, 8).map(r => [r.name, String(r.onHand), r.cover == null ? '\u2014' : (r.cover >= 100 ? '100+' : String(Math.round(r.cover * 10) / 10)), r.out, r.next, r.suggest > 0 ? String(r.suggest) : '\u2014', { t: r.action, cls: r.action === 'Order Now' ? 'rp-red' : 'rp-amber' }]), [1, 2, 5])); const mm = more(d.act.length, 8); if (mm) page.appendChild(mm); }
-      page.appendChild(el('h2', null, 'Deliveries Due In The Next 4 Weeks')); if (!d.due.length) page.appendChild(none('No deliveries are entered for the next 4 weeks.')); else { page.appendChild(table(['Model', 'PO Number', 'Quantity', 'Due', 'Delay'], d.due.slice(0, 6).map(r => [r.name, r.po || '\u2014', String(r.qty), fmtDate(r.eff), r.delay > 0 ? { t: '+' + r.delay + ' days', cls: 'rp-red' } : '\u2014']), [2])); const mm = more(d.due.length, 6); if (mm) page.appendChild(mm); }
-      page.appendChild(el('h2', null, 'Late Or Overdue Deliveries')); if (!d.late.length) page.appendChild(none('No late or overdue deliveries.')); else { page.appendChild(table(['Model', 'PO Number', 'Quantity', 'Was', 'Now', 'What It Means'], d.late.slice(0, 6).map(r => [r.name, r.po || '\u2014', String(r.qty), fmtDate(r.due), r.overdue ? { t: 'Overdue', cls: 'rp-red' } : { t: fmtDate(r.eff) + ' (+' + r.delay + ' d)', cls: 'rp-amber' }, r.impact]), [2])); const mm = more(d.late.length, 6); if (mm) page.appendChild(mm); }
-      page.appendChild(el('h2', null, 'Overstock Watch')); if (!d.over.length) page.appendChild(none('No overstocked models.')); else page.appendChild(table(['Model', 'On Hand', 'Cover (Wks)'], d.over.slice(0, 3).map(r => [r.name, String(r.onHand), r.cover == null ? '\u2014' : (r.cover >= 100 ? '100+' : String(Math.round(r.cover * 10) / 10))]), [1, 2]));
+      cfg.sections.forEach(key => secs[key](d, cap[key]));
       page.appendChild(el('div', 'rp-foot', 'Deliveries owner: ' + OWNER + (d.metas.length ? '. Last updated ' + d.metas.map(x => cfgs[x.k].name + ' ' + fmtDate(new Date(x.m.updatedAt))).join(', ') : '. No deliveries have been saved yet') + '. Indicative only: built from the weekly history; arrivals count only what is entered on the Deliveries tab; overdue lines are not counted.'));
     };
-    scope.addEventListener('change', draw); who2.addEventListener('input', draw); root.addEventListener('keydown', e => { if (e.key === 'Escape') root.remove(); });
+    scope.addEventListener('change', draw); who2.addEventListener('change', () => { try { localStorage.setItem('psi_report_dept_v1', who2.value); } catch (e) {} draw(); }); root.addEventListener('keydown', e => { if (e.key === 'Escape') root.remove(); });
     document.body.appendChild(root); draw();
   }
   // ---------------- install the tab on each brand ----------------
