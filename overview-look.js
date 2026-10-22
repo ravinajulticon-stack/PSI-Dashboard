@@ -6,6 +6,7 @@
 //  - Brand tabs: all three the same width (200 px, content centred).
 //  - Samsung header: the same header as Philips Safes / Locks (badge + name + weeks line) on all four tabs.
 //  - Philips Locks header line says "60-Day Validity" like the other two (it said "60-Day Lead").
+//  - Tabs under the brand bar: equal width (150 px), same flat look as the brand tabs (underline in the brand colour, no pill), with an icon each.
 //  - Brand colour on every tab: inside each brand the page's accent colour (--mac-accent / --mac-accent-bg) is the
 //    brand's own colour, so Weekly Entry and Full History pick it up (Save buttons, week-filter buttons, month
 //    headers, + New, focus rings). The I (Inventory) column keeps its blue on purpose: it is the data colour code
@@ -43,9 +44,13 @@
   .brand-bar .brand-tab.active { box-shadow: inset 0 -2px 0 var(--rd-tab, var(--mac-accent)); }
   .brand-bar .rd-user { display: flex; align-items: center; gap: 8px; margin-right: 12px; font-size: 12px; font-weight: 600; color: var(--mac-text); white-space: nowrap; }
   .brand-bar .rd-user b { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #1f2a37; color: #fff; font-size: 11px; letter-spacing: .02em; }
-  .sub-toolbar .seg-control { background: none; border: 0; box-shadow: none; padding: 0; gap: 8px; }
-  .sub-toolbar .seg-control .seg-btn { border: 0; box-shadow: none; border-radius: 999px; padding: 6px 16px; font-size: 12.5px; font-weight: 500; background: #eef1f5; color: var(--mac-text); }
-  .sub-toolbar .seg-control .seg-btn.active { background: var(--rd-brand, var(--mac-accent)); color: #fff; }
+  .sub-toolbar .seg-control { align-self: stretch; gap: 0; background: none; border: 0; box-shadow: none; padding: 0; }
+  .sub-toolbar .seg-control button.seg-btn { flex: 0 0 150px; height: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px; border: 0; border-radius: 0; background: transparent; color: var(--mac-text2); font-size: 13px; font-weight: 500; box-shadow: none; }  /* same look as the brand tabs: equal width, no pill */
+  .sub-toolbar .seg-control button.seg-btn:hover:not(.active) { background: color-mix(in srgb, var(--mac-text) 6%, transparent); color: var(--mac-text); }
+  .sub-toolbar .seg-control button.seg-btn.active { background: transparent; color: var(--mac-text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--rd-brand, var(--mac-accent)); }
+  .sub-toolbar .seg-control button.seg-btn svg { width: 16px; height: 16px; flex: none; opacity: 0.85; }
+  .sub-toolbar .seg-control button.seg-btn.active svg { color: var(--rd-brand, var(--mac-accent)); opacity: 1; }
+  @media (max-width: 760px) { .sub-toolbar .seg-control button.seg-btn { flex: 1 1 0; min-width: 0; padding: 0 4px; gap: 5px; font-size: 12px; } }
   .rd-head .section-title, .rd-look .section-header .section-title { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
   .rd-head .section-sub, .rd-look .section-header .section-sub { font-size: 13px; margin-top: 2px; }
   .rd-head-tools input { height: 36px; min-width: 260px; box-sizing: border-box; border-radius: 8px; font-size: 13px; padding-left: 34px !important; background-repeat: no-repeat; background-position: 11px center; background-size: 15px 15px; }
@@ -156,6 +161,26 @@
     sel.addEventListener('change', press); dir.addEventListener('click', press);
     box.appendChild(sel); box.appendChild(dir); grp.appendChild(box); syncSort(k);
   }
+  // Line icons for the four tabs under the brand bar (Overview, Weekly Entry, Full History, Forecast), added once per button.
+  const TAB_ICONS = {
+    overview: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+    entry: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    history: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    forecast: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>'
+  };
+  function tabIcons() {
+    document.querySelectorAll('.sub-toolbar .seg-control .seg-btn').forEach(b => {
+      if (b.querySelector('svg')) return;
+      const t = b.textContent.trim().toLowerCase();
+      const key = /overview/.test(t) ? 'overview' : /entry/.test(t) ? 'entry' : /history/.test(t) ? 'history' : /forecast/.test(t) ? 'forecast' : null;
+      if (!key) return;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '1.8'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round'); svg.setAttribute('aria-hidden', 'true');
+      svg.innerHTML = TAB_ICONS[key];                                 // fixed markup above, never user data
+      b.insertBefore(svg, b.firstChild);
+    });
+  }
   // Samsung's four tabs each had their own header ("Overview", "Weekly Data Entry", "Full History", and none on Forecast), while
   // Philips Safes / Locks show one header on every tab: brand badge + brand name + "N Weeks Tracked W04 to W42 . 60-Day ...".
   // This gives Samsung the same header on all four tabs. The per-tab headers keep their buttons (Export JSON, Add Entry, the
@@ -204,6 +229,7 @@
     topBar(); colours();
     try { samsungHeaders(); } catch (e) { console.warn('[overview-look]', e && e.message); }
     try { locksWording(); } catch (e) { console.warn('[overview-look]', e && e.message); }
+    try { tabIcons(); setTimeout(tabIcons, 1500); } catch (e) { console.warn('[overview-look]', e && e.message); }
     Object.keys(BR).forEach(k => {
       const root = el(BR[k].root); if (!root) return;
       root.classList.add('rd-look');
