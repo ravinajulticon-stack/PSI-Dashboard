@@ -81,11 +81,11 @@
   // ---------------- styles ----------------
   const css = document.createElement('style'); css.id = 'psi-deliveries';
   css.textContent = `
-  .dl-wrap { max-width: 1030px; margin: 0 auto; padding: 20px 0 40px; }
+  .dl-wrap { width: 100%; box-sizing: border-box; padding: 4px 0 40px; }
   .dl-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 4px; }
   .dl-title { display: flex; align-items: center; gap: 12px; }
   .dl-badge { width: 28px; height: 28px; border-radius: 8px; background: var(--rd-brand); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-  .dl-title h2 { margin: 0; font-size: 22px; font-weight: 600; color: var(--mac-text); }
+  .dl-title h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--mac-text); }
   .dl-sub { font-size: 12.5px; color: var(--mac-text2); margin: 4px 0 12px; }
   .dl-btns { display: flex; gap: 8px; flex-wrap: wrap; }
   .dl-btn { font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--mac-border2); background: var(--mac-surface2); color: var(--mac-text); cursor: pointer; }
@@ -131,11 +131,12 @@
   /* five sub-tabs now: share the width on mid-size screens, and keep only the open tab's name on a phone */
   @media (max-width: 960px) { .sub-toolbar .seg-control button.seg-btn { flex: 1 1 0; min-width: 0; padding: 0 6px; } .sub-toolbar .seg-control { flex: 1 1 auto; min-width: 0; } }
   @media (max-width: 520px) { .sub-toolbar .seg-control button.seg-btn:not(.active) { font-size: 0; gap: 0; } .sub-toolbar .seg-control button.seg-btn.active { flex: 2.4 1 0; } }
-  .psi-rep-root { position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,.65); overflow: auto; }
+  .psi-rep-root { position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,.82); overflow: auto; }
   .psi-rep-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; justify-content: center; padding: 10px 12px; background: #2c2c2e; color: #f5f5f7; font-size: 12.5px; }
-  .psi-rep-bar select, .psi-rep-bar input { font: inherit; font-size: 12.5px; padding: 5px 8px; border-radius: 6px; border: 1px solid #555; background: #3a3a3c; color: #f5f5f7; }
+  .psi-rep-bar select, .psi-rep-bar input { width: auto !important; max-width: 230px; font: inherit; font-size: 12.5px; padding: 5px 8px; border-radius: 6px; border: 1px solid #555; background: #3a3a3c; color: #f5f5f7; }
   .psi-rep-page { background: #fff; width: 210mm; max-width: calc(100% - 16px); min-height: 270mm; margin: 16px auto; padding: 13mm; box-sizing: border-box; font: 12px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .psi-rep-page, .psi-rep-page * { color: #1d1d1f !important; background-color: transparent; }
+  .psi-rep-page { background: #fff !important; }
+  .psi-rep-page * { color: #1d1d1f !important; background-color: transparent; }
   .psi-rep-page h1 { font-size: 20px; margin: 0 0 2px; } .psi-rep-page h2 { font-size: 13.5px; margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #1d1d1f; }
   .psi-rep-page .rp-sub { color: #555 !important; font-size: 11.5px; margin-bottom: 8px; }
   .psi-rep-page .rp-kpis { display: flex; gap: 8px; margin: 10px 0 0; } .psi-rep-page .rp-kpi { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 6px 8px; } .psi-rep-page .rp-kpi b { display: block; font-size: 17px; }
@@ -160,7 +161,7 @@
     const c = cfgs[k], host = document.getElementById(c.id); if (!host) return;
     const brandCol = getComputedStyle(document.getElementById(c.box)).getPropertyValue('--rd-brand').trim(); if (brandCol) host.style.setProperty('--rd-brand', brandCol);
     host.textContent = ''; const wrap = el('div', 'dl-wrap'), st = stats(k), t = today(), meta = S[k].meta;
-    const head = el('div', 'dl-head'), title = el('div', 'dl-title'); title.appendChild(el('span', 'dl-badge', c.letter)); title.appendChild(el('h2', null, c.name + ' Deliveries')); head.appendChild(title);
+    const head = el('div', 'dl-head'), title = el('div', 'dl-title'); title.appendChild(el('h2', null, 'Deliveries On Order')); head.appendChild(title);
     const btns = el('div', 'dl-btns'), add = el('button', 'dl-btn primary', '+ Add Delivery'), rep = el('button', 'dl-btn', 'Weekly Supply Report'); add.type = rep.type = 'button';
     add.addEventListener('click', () => openModal(k, null)); rep.addEventListener('click', () => openReport(k)); btns.appendChild(rep); btns.appendChild(add); head.appendChild(btns); wrap.appendChild(head);
     wrap.appendChild(el('div', 'dl-sub', 'Purchase-order lines on the way. Owner: ' + OWNER + '. The Supply Risk Board and the Weekly Supply Report use these dates.'));
@@ -268,10 +269,10 @@
       page.appendChild(el('h1', null, 'Weekly Supply Report' + (who2.value.trim() ? ' \u2014 ' + who2.value.trim() : '')));
       page.appendChild(el('div', 'rp-sub', d.ks.map(x => cfgs[x].name).join(', ') + '  |  ' + d.week + '  |  Prepared ' + fmtDate(d.t) + (d.latest ? '  |  Data Through ' + d.latest : '')));
       const kp = el('div', 'rp-kpis'); [['Order Now', d.counts['Order Now']], ['Expedite', d.counts['Expedite']], ['Watch', d.counts['Watch']], ['Overstock', d.counts['Overstock']], ['Open Deliveries', d.open + ' (' + d.units.toLocaleString() + ')']].forEach(([l, v]) => { const x = el('div', 'rp-kpi'); x.appendChild(el('b', null, String(v))); x.appendChild(el('span', null, l)); kp.appendChild(x); }); page.appendChild(kp);
-      page.appendChild(el('h2', null, 'Needs Action Now')); if (!d.act.length) page.appendChild(none('Nothing needs action this week.')); else { page.appendChild(table(['Model', 'On Hand', 'Cover (Wks)', 'Stock-Out', 'Next Arrival', 'Suggested Order', 'Action'], d.act.slice(0, 12).map(r => [r.name, String(r.onHand), r.cover == null ? '\u2014' : (r.cover >= 100 ? '100+' : String(Math.round(r.cover * 10) / 10)), r.out, r.next, r.suggest > 0 ? String(r.suggest) : '\u2014', { t: r.action, cls: r.action === 'Order Now' ? 'rp-red' : 'rp-amber' }]), [1, 2, 5])); const mm = more(d.act.length, 12); if (mm) page.appendChild(mm); }
-      page.appendChild(el('h2', null, 'Deliveries Due In The Next 4 Weeks')); if (!d.due.length) page.appendChild(none('No deliveries are entered for the next 4 weeks.')); else { page.appendChild(table(['Model', 'PO Number', 'Quantity', 'Due', 'Delay'], d.due.slice(0, 12).map(r => [r.name, r.po || '\u2014', String(r.qty), fmtDate(r.eff), r.delay > 0 ? { t: '+' + r.delay + ' days', cls: 'rp-red' } : '\u2014']), [2])); const mm = more(d.due.length, 12); if (mm) page.appendChild(mm); }
-      page.appendChild(el('h2', null, 'Late Or Overdue Deliveries')); if (!d.late.length) page.appendChild(none('No late or overdue deliveries.')); else { page.appendChild(table(['Model', 'PO Number', 'Quantity', 'Was', 'Now', 'What It Means'], d.late.slice(0, 10).map(r => [r.name, r.po || '\u2014', String(r.qty), fmtDate(r.due), r.overdue ? { t: 'Overdue', cls: 'rp-red' } : { t: fmtDate(r.eff) + ' (+' + r.delay + ' d)', cls: 'rp-amber' }, r.impact]), [2])); const mm = more(d.late.length, 10); if (mm) page.appendChild(mm); }
-      page.appendChild(el('h2', null, 'Overstock Watch')); if (!d.over.length) page.appendChild(none('No overstocked models.')); else page.appendChild(table(['Model', 'On Hand', 'Cover (Wks)'], d.over.slice(0, 5).map(r => [r.name, String(r.onHand), r.cover == null ? '\u2014' : (r.cover >= 100 ? '100+' : String(Math.round(r.cover * 10) / 10))]), [1, 2]));
+      page.appendChild(el('h2', null, 'Needs Action Now')); if (!d.act.length) page.appendChild(none('Nothing needs action this week.')); else { page.appendChild(table(['Model', 'On Hand', 'Cover (Wks)', 'Stock-Out', 'Next Arrival', 'Suggested Order', 'Action'], d.act.slice(0, 8).map(r => [r.name, String(r.onHand), r.cover == null ? '\u2014' : (r.cover >= 100 ? '100+' : String(Math.round(r.cover * 10) / 10)), r.out, r.next, r.suggest > 0 ? String(r.suggest) : '\u2014', { t: r.action, cls: r.action === 'Order Now' ? 'rp-red' : 'rp-amber' }]), [1, 2, 5])); const mm = more(d.act.length, 8); if (mm) page.appendChild(mm); }
+      page.appendChild(el('h2', null, 'Deliveries Due In The Next 4 Weeks')); if (!d.due.length) page.appendChild(none('No deliveries are entered for the next 4 weeks.')); else { page.appendChild(table(['Model', 'PO Number', 'Quantity', 'Due', 'Delay'], d.due.slice(0, 6).map(r => [r.name, r.po || '\u2014', String(r.qty), fmtDate(r.eff), r.delay > 0 ? { t: '+' + r.delay + ' days', cls: 'rp-red' } : '\u2014']), [2])); const mm = more(d.due.length, 6); if (mm) page.appendChild(mm); }
+      page.appendChild(el('h2', null, 'Late Or Overdue Deliveries')); if (!d.late.length) page.appendChild(none('No late or overdue deliveries.')); else { page.appendChild(table(['Model', 'PO Number', 'Quantity', 'Was', 'Now', 'What It Means'], d.late.slice(0, 6).map(r => [r.name, r.po || '\u2014', String(r.qty), fmtDate(r.due), r.overdue ? { t: 'Overdue', cls: 'rp-red' } : { t: fmtDate(r.eff) + ' (+' + r.delay + ' d)', cls: 'rp-amber' }, r.impact]), [2])); const mm = more(d.late.length, 6); if (mm) page.appendChild(mm); }
+      page.appendChild(el('h2', null, 'Overstock Watch')); if (!d.over.length) page.appendChild(none('No overstocked models.')); else page.appendChild(table(['Model', 'On Hand', 'Cover (Wks)'], d.over.slice(0, 3).map(r => [r.name, String(r.onHand), r.cover == null ? '\u2014' : (r.cover >= 100 ? '100+' : String(Math.round(r.cover * 10) / 10))]), [1, 2]));
       page.appendChild(el('div', 'rp-foot', 'Deliveries owner: ' + OWNER + (d.metas.length ? '. Last updated ' + d.metas.map(x => cfgs[x.k].name + ' ' + fmtDate(new Date(x.m.updatedAt))).join(', ') : '. No deliveries have been saved yet') + '. Indicative only: built from the weekly history; arrivals count only what is entered on the Deliveries tab; overdue lines are not counted.'));
     };
     scope.addEventListener('change', draw); who2.addEventListener('input', draw); root.addEventListener('keydown', e => { if (e.key === 'Escape') root.remove(); });
@@ -297,5 +298,6 @@
   });
   listeners.push(() => Object.keys(cfgs).forEach(k => { const v = document.getElementById(cfgs[k].id); if (v && v.offsetParent !== null) render(k); }));
   try { if (localStorage.getItem('undefined')) localStorage.removeItem('undefined'); } catch (e) {}   // the page's old Incoming loader saves every row it does not know under the key "undefined"; clear that junk
-  const loadAll = () => Object.keys(ROW).forEach(load); loadAll(); setTimeout(loadAll, 4000);
+  const clean = () => { try { localStorage.removeItem('undefined'); } catch (e) {} };   // the old loader re-creates it after every load
+  const loadAll = () => { Object.keys(ROW).forEach(load); setTimeout(clean, 2500); }; loadAll(); setTimeout(loadAll, 4000);
 })();
