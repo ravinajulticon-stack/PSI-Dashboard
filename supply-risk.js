@@ -7,6 +7,9 @@
 //    is treated as NOT ordered, and the board says so.
 //  - Phase 0: the "Ignore One-Off Spikes" option was removed from the forecast card (the back-test showed it under-forecast demand by
 //    about 28%).
+//  - Overstock: a new model with under 12 weeks of history but 26+ weeks of cover is flagged Overstock (it used to read "New Model").
+//  - Forecast Accuracy: a collapsible panel under the board replays the history and shows how far off the forecast would have been
+//    (average miss and bias, 4 and 8 weeks ahead, by demand pattern and by week), new method against the current 8-week average.
 // Nothing here changes the Overview, Weekly Entry, Full History or the existing forecast card. To undo: remove this script tag.
 (function () {
   const BR = {
@@ -55,13 +58,37 @@
     const target = pct(wins, svc) + CYCLE_WEEKS * rate, net = invNow + onOrder, suggest = Math.max(0, Math.ceil(target - net));
     let action;
     if (pattern === 'Low Volume') action = 'Low Volume';
-    else if (isNew) action = 'New Model';
+    else if (isNew) action = (cover !== null && cover >= OVERSTOCK_WEEKS && likely.firstShort === null) ? 'Overstock' : 'New Model';   // a new model sitting on 26+ weeks of stock is still overstock
     else if (likely.firstShort !== null) action = nextArr && nextArr.ahead > likely.firstShort ? 'Expedite' : (nextArr ? 'Watch' : (cover !== null && cover < L || risk >= 50 || invNow <= 0 ? 'Order Now' : 'Watch'));
     else if (cover !== null && cover >= OVERSTOCK_WEEKS) action = 'Overstock';
     else if ((risk !== null && risk >= 20) || (cover !== null && cover < 1.5 * L)) action = 'Watch';
     else action = 'OK';
     if (action === 'Watch' && !nextArr && likely.firstShort === null && risk >= 50) action = 'Order Now';
     return { name: m.name, pattern, invNow, rate, rate80, cover, p50, p80, p90, risk, svc, suggest, onOrder, nextArr, arr, likely, cautious, action, tot, L, W, isNew, emptyWeeks, prelaunch, series, isCore };
+  }
+  function patternOf(s, valid, tot) {                                            // same split as analyse(): smooth / erratic / intermittent / lumpy
+    const nz = s.filter((v, i) => valid[i] && v > 0), vals = s.filter((v, i) => valid[i]);
+    const adi = nz.length ? vals.length / nz.length : 99, mu = mean(nz), cv2 = mu ? mean(nz.map(v => (v - mu) ** 2)) / (mu * mu) : 0;
+    return tot < MIN_UNITS ? 'Low Volume' : (adi < 1.32 ? (cv2 < 0.49 ? 'Smooth' : 'Erratic') : (cv2 < 0.49 ? 'Intermittent' : 'Lumpy'));
+  }
+  function backtest(models) {                                                      // replay history: forecast the next 4 / 8 weeks from each week since W16, score against what sold
+    const mk = () => ({ ae: 0, f: 0, a: 0 }), R = { models: 0, h: { 4: { n: mk(), c: mk() }, 8: { n: mk(), c: mk() } }, pat: {}, org: {} };
+    const add = (pair, fn, fc, act) => { [[pair.n, fn], [pair.c, fc]].forEach(([acc, f]) => { acc.ae += Math.abs(f - act); acc.f += f; acc.a += act; }); };
+    models.forEach(m => {
+      const s = m.s.map(v => Math.max(0, v || 0)), inv = m.inv, n = s.length, tot = sum(s); if (tot < MIN_UNITS) return;
+      const valid = s.map((v, i) => inv[i] != null && !(inv[i] <= 0 && v <= 0)), pat = patternOf(s, valid, tot);
+      R.models++; R.pat[pat] = R.pat[pat] || { models: 0, n: mk(), c: mk() }; R.pat[pat].models++;
+      for (const H of [4, 8]) for (let t = 12; t <= n - H - 1; t++) {
+        const act = sum(s.slice(t + 1, t + 1 + H));
+        const fn = croston(s.slice(0, t + 1).filter((v, i) => valid[i])) * H, fc = mean(s.slice(Math.max(0, t - 7), t + 1)) * H;
+        add(R.h[H], fn, fc, act);
+        if (H === 8) { const o = R.org[t] = R.org[t] || { lbl: m.allWeeks[t], n: mk(), c: mk() }; add(o, fn, fc, act); add(R.pat[pat], fn, fc, act); }
+      }
+    });
+    const sc = acc => acc.a > 0 ? { miss: 100 * acc.ae / acc.a, bias: 100 * (acc.f - acc.a) / acc.a } : null;
+    return { models: R.models, h4: { n: sc(R.h[4].n), c: sc(R.h[4].c) }, h8: { n: sc(R.h[8].n), c: sc(R.h[8].c) },
+      pat: Object.fromEntries(Object.entries(R.pat).map(([k, v]) => [k, { models: v.models, n: sc(v.n), c: sc(v.c) }])),
+      org: Object.keys(R.org).map(Number).sort((a, b) => a - b).map(t => ({ lbl: R.org[t].lbl, n: sc(R.org[t].n), c: sc(R.org[t].c) })) };
   }
   // </pure>
   const RANK = { 'Order Now': 0, 'Expedite': 1, 'Watch': 2, 'OK': 3, 'Overstock': 4, 'New Model': 5, 'Low Volume': 6 };
@@ -99,6 +126,18 @@
   .sr-kv span:nth-child(odd) { color: var(--mac-text2); } .sr-kv span:nth-child(even) { color: var(--mac-text); font-weight: 600; text-align: right; }
   .sr-chartbox { position: relative; height: 200px; }
   .sr-foot { font-size: 11px; color: var(--mac-text3); margin-top: 10px; line-height: 1.5; }
+  .sr-acc { margin-top: 12px; border-top: 1px solid var(--mac-border); padding-top: 10px; }
+  .sr-acc-toggle { font: inherit; font-size: 12px; font-weight: 600; color: var(--mac-text); background: color-mix(in srgb, var(--mac-text) 8%, transparent); border: 0; border-radius: 8px; padding: 6px 14px; cursor: pointer; }
+  .sr-acc-toggle:hover { background: color-mix(in srgb, var(--mac-text) 14%, transparent); }
+  .sr-acc h4 { font-size: 12.5px; font-weight: 600; color: var(--mac-text); margin: 16px 0 6px; }
+  .sr-acc p { font-size: 11.5px; color: var(--mac-text2); line-height: 1.55; margin: 8px 0 0; }
+  .sr-acc table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sr-acc th { text-align: right; font-size: 11px; font-weight: 600; color: var(--mac-text2); padding: 6px 9px; border-bottom: 1px solid var(--mac-border2); }
+  .sr-acc td { text-align: right; padding: 7px 9px; border-bottom: 1px solid var(--mac-border); color: var(--mac-text); white-space: nowrap; }
+  .sr-acc th:first-child, .sr-acc td:first-child { text-align: left; }
+  .sr-acc td.better { color: var(--mac-green); font-weight: 600; }
+  .sr-accgrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .sr-accgrid { grid-template-columns: 1fr; } }
   @media (max-width: 900px) { .sr-dgrid { grid-template-columns: 1fr; } }`;
   document.head.appendChild(css);
 
@@ -146,12 +185,54 @@
     add('Stock-Out: Likely / Cautious', stockOutText(a, 'likely', latestNum) + ' / ' + stockOutText(a, 'cautious', latestNum));
     add('Deliveries Entered', a.onOrder > 0 ? Object.keys(a.arr).map(Number).sort((x, y) => x - y).map(t => wkLabel(latestNum + t) + ': ' + a.arr[t]).join(', ') : 'None');
     add('Weeks Left Out Of The Estimate', a.emptyWeeks + ' Empty Shelf, ' + a.prelaunch + ' Before Launch');
+    add('Weeks Of History', a.series.length + (a.isNew ? ' (Short: Treat With Care)' : ''));
     if (a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action)) add('Suggested Order', a.suggest + ' Units (' + Math.round(a.svc * 100) + '% Cover + ' + CYCLE_WEEKS + ' Weeks)');
     const left = el('div'); left.appendChild(kv);
     const right = el('div'); const box = el('div', 'sr-chartbox'); const cv = el('canvas'); box.appendChild(cv); right.appendChild(box);
     g.appendChild(left); g.appendChild(right); td.appendChild(g); tr.appendChild(td);
     setTimeout(() => { try { drawChart(k, a, latestNum, cv); } catch (e) { console.warn('[supply-risk] chart', e && e.message); } }, 0);
     return tr;
+  }
+  const pctTxt = v => v == null ? '\u2014' : (Math.round(v * 10) / 10).toFixed(1) + '%';
+  const biasTxt = v => v == null ? '\u2014' : (v >= 0 ? '+' : '\u2212') + Math.abs(Math.round(v * 10) / 10).toFixed(1) + '%' + (Math.abs(v) < 0.5 ? '' : (v < 0 ? ' (Too Low)' : ' (Too High)'));
+  function accTable(headers, rows) {
+    const t = el('table'), th = el('thead'), hr = el('tr'); headers.forEach(h => hr.appendChild(el('th', null, h))); th.appendChild(hr); t.appendChild(th);
+    const tb = el('tbody'); rows.forEach(r => { const tr = el('tr'); r.forEach(c => { const td = el('td', c && c.cls ? c.cls : null, c && c.t != null ? c.t : c); tr.appendChild(td); }); tb.appendChild(tr); }); t.appendChild(tb); return t;
+  }
+  function drawAccuracy(k, org, canvas) {
+    if (typeof Chart === 'undefined' || !org.length) return;
+    const rawCol = getComputedStyle(document.getElementById(BR[k].box)).getPropertyValue('--rd-brand').trim() || 'rgb(10, 132, 255)';
+    const mm = /(\d+)\D+(\d+)\D+(\d+)/.exec(rawCol), brandCol = mm ? 'rgb(' + mm[1] + ',' + mm[2] + ',' + mm[3] + ')' : '#0a84ff';
+    if (charts[k + 'acc']) charts[k + 'acc'].destroy();
+    charts[k + 'acc'] = new Chart(canvas, { type: 'line', data: { labels: org.map(o => o.lbl), datasets: [
+      { label: 'New Method', data: org.map(o => o.n ? Math.round(o.n.miss * 10) / 10 : null), borderColor: brandCol, backgroundColor: brandCol, borderWidth: 2, pointRadius: 2, tension: 0.15 },
+      { label: 'Current 8-Week Average', data: org.map(o => o.c ? Math.round(o.c.miss * 10) / 10 : null), borderColor: '#98989d', backgroundColor: '#98989d', borderWidth: 2, borderDash: [5, 4], pointRadius: 2, tension: 0.15 }
+    ] }, options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: true, labels: { boxWidth: 12, font: { size: 10 } } }, tooltip: { mode: 'index', intersect: false } },
+      scales: { x: { ticks: { maxTicksLimit: 10, font: { size: 10 } }, grid: { display: false } }, y: { beginAtZero: true, title: { display: true, text: 'Average Miss (%)', font: { size: 10 } }, ticks: { font: { size: 10 } } } } } });
+  }
+  function accuracyBlock(k, host) {
+    const st = state[k], box = el('div', 'sr-acc'), tg = el('button', 'sr-acc-toggle', (st.acc ? 'Hide' : 'Show') + ' Forecast Accuracy'); tg.type = 'button';
+    tg.addEventListener('click', () => { st.acc = !st.acc; render(k); }); box.appendChild(tg);
+    if (st.acc) {
+      const mine = backtest(BR[k].models()), all = backtest([].concat(...Object.keys(BR).map(x => BR[x].models())));
+      box.appendChild(el('p', null, 'How far off the forecast would have been. For every week since W16 the history is replayed: forecast the next 4 and 8 weeks using only the weeks before, then compare with what actually sold. Lower is better. "New Method" is the one this board uses; "Current" is the 8-week average the Overview and the old forecast card use.'));
+      const better = (a, b) => (a && b && a.miss < b.miss) ? 'better' : null;
+      const row = (scope, label, r) => [scope, label, { t: pctTxt(r.n && r.n.miss), cls: better(r.n, r.c) }, pctTxt(r.c && r.c.miss), biasTxt(r.n && r.n.bias), biasTxt(r.c && r.c.bias)];
+      box.appendChild(el('h4', null, 'Average Miss And Bias'));
+      box.appendChild(accTable(['Scope', 'Look-Ahead', 'Miss: New', 'Miss: Current', 'Bias: New', 'Bias: Current'], [
+        row(BR[k].name + ' (' + mine.models + ' Models)', 'Next 4 Weeks', { n: mine.h4.n, c: mine.h4.c }), row('', 'Next 8 Weeks', { n: mine.h8.n, c: mine.h8.c }),
+        row('All Brands (' + all.models + ' Models)', 'Next 4 Weeks', { n: all.h4.n, c: all.h4.c }), row('', 'Next 8 Weeks', { n: all.h8.n, c: all.h8.c })]));
+      const g = el('div', 'sr-accgrid'), left = el('div'), right = el('div');
+      const pats = ['Smooth', 'Erratic', 'Intermittent', 'Lumpy'].filter(p => mine.pat[p]);
+      left.appendChild(el('h4', null, 'By Demand Pattern: ' + BR[k].name + ', Next 8 Weeks'));
+      left.appendChild(pats.length ? accTable(['Pattern', 'Models', 'Miss: New', 'Miss: Current'], pats.map(p => [p, String(mine.pat[p].models), { t: pctTxt(mine.pat[p].n && mine.pat[p].n.miss), cls: better(mine.pat[p].n, mine.pat[p].c) }, pctTxt(mine.pat[p].c && mine.pat[p].c.miss)])) : el('p', null, 'Not enough history to score yet.'));
+      right.appendChild(el('h4', null, 'Average Miss By The Week The Forecast Was Made'));
+      const cb = el('div', 'sr-chartbox'), cv = el('canvas'); cb.appendChild(cv); right.appendChild(cb);
+      g.appendChild(left); g.appendChild(right); box.appendChild(g);
+      box.appendChild(el('p', null, 'Read with care: sales are recorded as zero on weeks the shelf was empty, so models that ran out look easier to forecast than they were, which slightly flatters the Current method and slightly penalises the New one. Lumpy and intermittent models miss by far more whichever method is used, so lean on the range and the chance of running out, not on one date. Models that sold fewer than ' + MIN_UNITS + ' units are left out.'));
+      setTimeout(() => { try { drawAccuracy(k, mine.org, cv); } catch (e) { console.warn('[supply-risk] accuracy chart', e && e.message); } }, 0);
+    }
+    host.appendChild(box);
   }
   function render(k) {
     const b = BR[k], root = document.getElementById(b.root); if (!root) return;
@@ -187,6 +268,7 @@
     });
     tbl.appendChild(tb); wrap.appendChild(tbl); host.appendChild(wrap);
     host.appendChild(el('div', 'sr-foot', 'Indicative only. Built from ' + (list[0] ? list[0].series.length : 0) + ' or fewer weeks of history, so lumpy models stay hard to predict (the back-test missed by 66% to 80% on them): use the range, not a single date. Click a model for its range and projection. Core models (80% of units sold) are planned at 90% cover, the rest at 80%.'));
+    accuracyBlock(k, host);
   }
   function refreshVisible() { Object.keys(BR).forEach(k => { const r = document.getElementById(BR[k].root); if (r && r.offsetParent !== null) { try { render(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } } }); }
   Object.keys(BR).forEach(k => {
@@ -194,5 +276,5 @@
     window[b.sw] = function (name) { const r = orig.apply(this, arguments); if (name === b.view) setTimeout(() => { try { render(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } }, 80); return r; };
   });
   ['renderForecast', 'renderPlocksForecast'].forEach(fn => { const o = window[fn]; if (typeof o !== 'function') return; window[fn] = function () { const r = o.apply(this, arguments); setTimeout(refreshVisible, 40); return r; }; });
-  window.__srTest = { analyse, projectStock, croston, wkLabel, wkNum };
+  window.__srTest = { analyse, projectStock, croston, wkLabel, wkNum, backtest, patternOf };
 })();
