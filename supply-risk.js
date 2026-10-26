@@ -20,7 +20,7 @@
     philips: { name: 'Philips Safes', root: 'pview-pforecast', sw: 'switchPhilipsView', view: 'pforecast', lead: 45, box: 'brand-philips', section: 'philipsForecastSection', models: () => computePhilipsModels(phGetEntries()) },
     plocks: { name: 'Philips Locks', root: 'plview-plforecast', sw: 'switchPlocksView', view: 'plforecast', lead: 60, box: 'brand-plocks', section: 'plocksForecastSection', models: () => computePlocksModels(plGetEntries()) }
   };
-  const H = 14, MIN_UNITS = 15, OVERSTOCK_WEEKS = 26, CYCLE_WEEKS = 4, CAP_DAYS = 180;           // projection weeks, "real sales" threshold, overstock cover, order cycle
+  const H = 14, MIN_UNITS = 15, OVERSTOCK_WEEKS = 26, CYCLE_WEEKS = 4, CAP_DAYS = 180, BIG_MIN = 20, BIG_X = 4;           // projection weeks, "real sales" threshold, overstock cover, order cycle
   const SERVICE = { core: 0.9, other: 0.8 };                                      // chance of NOT running out: core models (80% of sales) / the rest
   // <pure>
   const sum = a => a.reduce((x, y) => x + y, 0);
@@ -35,12 +35,13 @@
     for (let t = 1; t <= H; t++) { stock += (arr[t] || 0) - rate; if (stock < 0) { stock = 0; if (firstShort === null) firstShort = t; empty++; } path.push(stock); }
     return { path, firstShort, empty };
   }
-  function analyse(m, leadDays, latestNum, incoming, isCore) {
+  function analyse(m, leadDays, latestNum, incoming, isCore, flagged) {
     const s = m.s.map(v => Math.max(0, v || 0)), inv = m.inv, n = s.length;
     const first = inv.findIndex(v => v != null); const start = first < 0 ? n : first;
     let invNow = 0; for (let i = n - 1; i >= 0; i--) if (inv[i] != null) { invNow = inv[i]; break; }
-    const valid = s.map((v, i) => inv[i] != null && !(inv[i] <= 0 && v <= 0));
-    const prelaunch = start, emptyWeeks = s.filter((v, i) => inv[i] != null && !valid[i]).length;
+    const real = s.map((v, i) => inv[i] != null && !(inv[i] <= 0 && v <= 0)), fl = flagged || new Set();
+    const valid = real.map((r, i) => r && !fl.has((m.allWeeks || [])[i]));          // a week marked as a one-off is left out of the estimate, like an empty-shelf week
+    const prelaunch = start, emptyWeeks = s.filter((v, i) => inv[i] != null && !real[i]).length, oneOffWeeks = s.filter((v, i) => real[i] && !valid[i]).length;
     const tot = sum(s), L = leadDays / 7, W = Math.ceil(L), scale = L / W;
     const rate = croston(s.filter((v, i) => valid[i]));
     const series = s.map((v, i) => valid[i] ? v : rate).slice(start);
@@ -68,7 +69,7 @@
     else if ((risk !== null && risk >= 20) || (cover !== null && cover < 1.5 * L)) action = 'Watch';
     else action = 'OK';
     if (action === 'Watch' && !nextArr && likely.firstShort === null && risk >= 50) action = 'Order Now';
-    return { name: m.name, pattern, invNow, rate, rate80, cover, p50, p80, p90, risk, svc, suggest, suggestRaw, capped, onOrder, nextArr, arr, likely, cautious, action, tot, L, W, isNew, emptyWeeks, prelaunch, series, isCore };
+    return { name: m.name, pattern, invNow, rate, rate80, cover, p50, p80, p90, risk, svc, suggest, suggestRaw, capped, onOrder, nextArr, arr, likely, cautious, action, tot, L, W, isNew, emptyWeeks, oneOffWeeks, prelaunch, series, isCore };
   }
   function patternOf(s, valid, tot) {                                            // same split as analyse(): smooth / erratic / intermittent / lumpy
     const nz = s.filter((v, i) => valid[i] && v > 0), vals = s.filter((v, i) => valid[i]);
@@ -129,6 +130,13 @@
   .sr-kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 12px; }
   .sr-kv span:nth-child(odd) { color: var(--mac-text2); } .sr-kv span:nth-child(even) { color: var(--mac-text); font-weight: 600; text-align: right; }
   .sr-chartbox { position: relative; height: 200px; }
+  .sr-oo { margin-top: 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; }
+  .sr-oo-h { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .sr-oo-p { font-size: 11px; color: var(--mac-text3, #98989d); margin-bottom: 8px; line-height: 1.4; }
+  .sr-oo-r { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 12px; }
+  .sr-oo-b { flex: 0 0 auto; min-width: 160px; font: inherit; font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: transparent; color: inherit; cursor: pointer; }
+  .sr-oo-b.on { border-color: var(--mac-orange, #ff9500); color: var(--mac-orange, #ff9500); }
+  .sr-oo-b:disabled { opacity: .6; cursor: default; }
   .sr-foot { font-size: 11px; color: var(--mac-text3); margin-top: 10px; line-height: 1.5; }
   .sr-acc { margin-top: 12px; border-top: 1px solid var(--mac-border); padding-top: 10px; }
   .sr-acc-toggle { font: inherit; font-size: 12px; font-weight: 600; color: var(--mac-text); background: color-mix(in srgb, var(--mac-text) 8%, transparent); border: 0; border-radius: 8px; padding: 6px 14px; cursor: pointer; }
@@ -155,7 +163,12 @@
     const pipe = P ? { any: pl.length > 0, n: pi.filter(x => !x.i.overdue).length, units: sum(pi.filter(x => !x.i.overdue).map(x => +x.l.qty || 0)), delayed: pi.filter(x => x.i.delay > 0).length, overdue: pi.filter(x => x.i.overdue).length, meta: P.meta(k), legacyN } : null;
     const tots = models.map(m => ({ n: m.name, t: Math.max(0, sum(m.s.map(v => Math.max(0, v || 0)))) })).sort((a, c) => c.t - a.t);
     const grand = sum(tots.map(x => x.t)) || 1; const core = new Set(); let run = 0; for (const x of tots) { if (run / grand >= 0.8) break; core.add(x.n); run += x.t; }
-    const list = models.map(m => analyse(m, b.lead, latestNum, incoming, core.has(m.name)));
+    const OO = window.PSI_ONEOFF; const list = models.map(m => analyse(m, b.lead, latestNum, incoming, core.has(m.name), OO ? OO.weeksFor(k, m.name) : undefined));
+    const rawBy = {}; models.forEach(m => { rawBy[m.name] = m; });
+    list.forEach(a => {                     // the model's unusually big sales weeks, offered for marking as one-offs (plus any already marked)
+      const m = rawBy[a.name], s = m.s.map(v => Math.max(0, v || 0)), pos = s.filter(v => v > 0).sort((x, y) => x - y), med = pos.length ? pos[Math.floor(pos.length / 2)] : 0, thr = Math.max(BIG_MIN, BIG_X * med), fl = OO ? OO.weeksFor(k, a.name) : new Set();
+      a.big = s.map((v, i) => ({ wk: (m.allWeeks || [])[i], units: v, flagged: fl.has((m.allWeeks || [])[i]) })).filter(x => x.wk && (x.units >= thr || x.flagged)).sort((x, y) => y.units - x.units).slice(0, 5);
+    });
     list.sort((a, c) => RANK[a.action] - RANK[c.action] || (c.risk || 0) - (a.risk || 0) || (a.cover == null ? 1e9 : a.cover) - (c.cover == null ? 1e9 : c.cover));
     const aheadOf = x => { let n = P.isoWeek(x.eff) - latestNum; if (n <= -26) n += 52; return n; };
     list.forEach(a => { a.dl = pi.filter(x => x.l.model === a.name && x.i.eff).map(x => ({ po: x.l.po, qty: +x.l.qty || 0, eff: x.i.eff, due: x.i.due, delay: x.i.delay, overdue: x.i.overdue })).sort((p, q) => p.eff - q.eff); a.nextLine = a.nextArr ? a.dl.find(x => !x.overdue && aheadOf(x) === a.nextArr.ahead) : null; });
@@ -194,14 +207,26 @@
     add('Stock-Out: Likely / Cautious', stockOutText(a, 'likely', latestNum) + ' / ' + stockOutText(a, 'cautious', latestNum));
     const PP = window.PSI_PIPELINE;
     add('Deliveries Entered', a.dl && a.dl.length ? a.dl.map(x => (x.po ? x.po + ': ' : '') + x.qty + ' on ' + PP.fmtDate(x.eff) + (x.overdue ? ' (Overdue, Not Counted)' : (x.delay > 0 ? ' (' + x.delay + ' Days Late)' : ''))).join('; ') : (a.onOrder > 0 ? Object.keys(a.arr).map(Number).sort((x, y) => x - y).map(t => wkLabel(latestNum + t) + ': ' + a.arr[t]).join(', ') : 'None'));
-    add('Weeks Left Out Of The Estimate', a.emptyWeeks + ' Empty Shelf, ' + a.prelaunch + ' Before Launch');
+    add('Weeks Left Out Of The Estimate', a.emptyWeeks + ' Empty Shelf, ' + a.prelaunch + ' Before Launch' + (a.oneOffWeeks ? ', ' + a.oneOffWeeks + ' One-Off' : ''));
     add('Weeks Of History', a.series.length + (a.isNew ? ' (Short: Treat With Care)' : ''));
     if (a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action)) add('Suggested Order', a.suggest + ' Units (' + Math.round(a.svc * 100) + '% Cover + ' + CYCLE_WEEKS + ' Weeks)' + (a.capped ? '. Capped At ' + CAP_DAYS + ' Days Of Cover, Uncapped ' + a.suggestRaw : ''));
-    const left = el('div'); left.appendChild(kv);
+    const left = el('div'); left.appendChild(kv); if (a.big && a.big.length && window.PSI_ONEOFF) left.appendChild(oneOffBlock(k, a));
     const right = el('div'); const box = el('div', 'sr-chartbox'); const cv = el('canvas'); box.appendChild(cv); right.appendChild(box);
     g.appendChild(left); g.appendChild(right); td.appendChild(g); tr.appendChild(td);
     setTimeout(() => { try { drawChart(k, a, latestNum, cv); } catch (e) { console.warn('[supply-risk] chart', e && e.message); } }, 0);
     return tr;
+  }
+  function oneOffBlock(k, a) {
+    const O = window.PSI_ONEOFF, box = el('div', 'sr-oo');
+    box.appendChild(el('div', 'sr-oo-h', 'Unusually Big Sales Weeks'));
+    box.appendChild(el('div', 'sr-oo-p', 'Was a week a one-off bulk or project order? Mark it, and the forecast leaves that week out instead of treating it as normal demand. The sales figure itself is not changed.'));
+    a.big.forEach(x => {
+      const r = el('div', 'sr-oo-r'); r.appendChild(el('span', '', x.wk + ': ' + x.units + ' units'));
+      const label = x.flagged ? 'Marked One-Off (Undo)' : 'Mark As One-Off', b = el('button', 'sr-oo-b' + (x.flagged ? ' on' : ''), label); b.type = 'button';
+      b.addEventListener('click', async ev => { ev.stopPropagation(); b.disabled = true; b.textContent = 'Saving...'; try { await (x.flagged ? O.unmark(k, a.name, x.wk) : O.mark(k, a.name, x.wk)); } catch (err) { alert(String(err && err.message || err)); b.disabled = false; b.textContent = label; } });
+      r.appendChild(b); box.appendChild(r);
+    });
+    return box;
   }
   const pctTxt = v => v == null ? '\u2014' : (Math.round(v * 10) / 10).toFixed(1) + '%';
   const biasTxt = v => v == null ? '\u2014' : (v >= 0 ? '+' : '\u2212') + Math.abs(Math.round(v * 10) / 10).toFixed(1) + '%' + (Math.abs(v) < 0.5 ? '' : (v < 0 ? ' (Too Low)' : ' (Too High)'));
@@ -276,7 +301,7 @@
     [['Model', ''], ['On Hand', ''], ['Demand / Wk', 'Typical weekly demand (Croston-SBA, empty-shelf weeks left out)'], ['Cover (Wks)', 'On hand divided by weekly demand'], ['Stock-Out', 'Likely week, with the cautious week (80% sure) in brackets'], ['Next Arrival', 'From the Incoming boxes'], ['Gap (Wks)', 'Weeks without stock in the next ' + H + ' weeks, likely case'], ['Chance Of Running Out', 'Share of past lead-time windows in which demand beat today\'s stock'], ['Suggested Order', 'Covers the chosen chance of not running out over the lead time, plus ' + CYCLE_WEEKS + ' weeks'], ['Action', '']].forEach(([t, tip]) => { const th = el('th', null, t); if (tip) th.title = tip; hr.appendChild(th); });
     thead.appendChild(hr); tbl.appendChild(thead); const tb = el('tbody');
     list.filter(a => !st.filter || a.action === st.filter).forEach(a => {
-      const tr = el('tr', 'sr-row'); const nm = el('td'); nm.appendChild(el('span', 'sr-name', a.name)); nm.appendChild(el('span', 'sr-pat', a.pattern)); tr.appendChild(nm);
+      const tr = el('tr', 'sr-row'); const nm = el('td'); nm.appendChild(el('span', 'sr-name', a.name)); nm.appendChild(el('span', 'sr-pat', a.pattern)); if (a.oneOffWeeks) { const t = el('span', 'sr-pat', a.oneOffWeeks + ' One-Off Left Out'); t.style.color = 'var(--mac-orange, #ff9500)'; nm.appendChild(t); } tr.appendChild(nm);
       const cell = (t, cls) => { const td = el('td', cls || null, t); tr.appendChild(td); return td; };
       cell(String(a.invNow), a.invNow <= 0 ? 'sr-bad' : null); cell(fmt1(a.rate)); cell(fmt1(a.cover), a.cover != null && a.cover < a.L ? 'sr-bad' : null);
       const so = stockOutText(a, 'likely', latestNum), sc = stockOutText(a, 'cautious', latestNum); cell(so === '\u2014' && sc === '\u2014' ? '\u2014' : so + (sc !== so ? ' (' + sc + ')' : ''), so === 'Now' ? 'sr-bad' : null);
@@ -297,10 +322,11 @@
   function refreshVisible() { Object.keys(BR).forEach(k => { const r = document.getElementById(BR[k].root); if (r && r.offsetParent !== null) { try { render(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } } }); }
   Object.keys(BR).forEach(k => {
     const b = BR[k], orig = window[b.sw]; if (typeof orig !== 'function') return;
-    window[b.sw] = function (name) { const r = orig.apply(this, arguments); if (name === b.view) setTimeout(() => { try { render(k); if (window.PSI_PIPELINE) window.PSI_PIPELINE.refresh(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } }, 80); return r; };
+    window[b.sw] = function (name) { const r = orig.apply(this, arguments); if (name === b.view) setTimeout(() => { try { render(k); if (window.PSI_PIPELINE) window.PSI_PIPELINE.refresh(k); if (window.PSI_ONEOFF) window.PSI_ONEOFF.refresh(k); } catch (e) { console.warn('[supply-risk]', e && e.message); } }, 80); return r; };
   });
   ['renderForecast', 'renderPlocksForecast'].forEach(fn => { const o = window[fn]; if (typeof o !== 'function') return; window[fn] = function () { const r = o.apply(this, arguments); setTimeout(refreshVisible, 40); return r; }; });
   window.__srApi = { getAnalysis, BR, wkLabel, stockOutText };                     // used by the Weekly Supply Report in deliveries.js
-  let hooks = 0; (function hook() { if (window.PSI_PIPELINE) window.PSI_PIPELINE.onChange(refreshVisible); else if (hooks++ < 20) setTimeout(hook, 600); })();   // redraw the board when deliveries change
+  let hooks = 0; (function hook() { if (window.PSI_PIPELINE) window.PSI_PIPELINE.onChange(refreshVisible); else if (hooks++ < 20) setTimeout(hook, 600); })();
+  let hooks2 = 0; (function hook2() { if (window.PSI_ONEOFF) window.PSI_ONEOFF.onChange(refreshVisible); else if (hooks2++ < 20) setTimeout(hook2, 600); })();   // ... and when a week is marked as a one-off   // redraw the board when deliveries change
   window.__srTest = { analyse, projectStock, croston, wkLabel, wkNum, backtest, patternOf };
 })();
