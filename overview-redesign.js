@@ -131,8 +131,8 @@
       else if (l.startsWith('project channel')) { ic = ICON.flag; note = 'Project Units \u00b7 ' + span; }
       else if (l.startsWith('total purchase')) { ic = ICON.cart; note = 'Units Purchased \u00b7 ' + span; }
       else if (l.startsWith('active models')) { ic = ICON.pulse; note = 'With Sell-Out \u00b7 Last 8 Weeks'; }
-      else if (l.startsWith('below 60-day runway')) {
-        ic = ICON.shield; note = 'Models Under 60 Days Of Cover';
+      else if (/^below \d+-day runway/.test(l)) {
+        ic = ICON.shield; note = 'Models Under ' + l.match(/\d+/)[0] + ' Days Of Cover';
         const n = parseInt(((val && val.textContent) || '0').replace(/\D/g, ''), 10) || 0;
         card.classList.toggle('rd-risk', n > 0); card.classList.toggle('rd-ok', n === 0);
       }
@@ -145,8 +145,9 @@
   // ---------- 3) Needs Attention panel ----------
   function renderNeeds(brand, models) {
     const b = BR[brand], box = el(b.alerts); if (!box || !Array.isArray(models)) return;
-    const crit = models.filter(m => m.weeksLeft !== null && m.weeksLeft <= TARGET_WEEKS).sort((x, y) => x.weeksLeft - y.weeksLeft);
-    const warn = models.filter(m => m.weeksLeft !== null && m.weeksLeft > TARGET_WEEKS && m.weeksLeft <= TARGET_WEEKS * 2).sort((x, y) => x.weeksLeft - y.weeksLeft);
+    const TW = brand === 'philips' ? PH_TARGET_WEEKS : TARGET_WEEKS;       // Safes: 45-day lead time; Samsung and Locks: 60 days
+    const crit = models.filter(m => m.weeksLeft !== null && m.weeksLeft <= TW).sort((x, y) => x.weeksLeft - y.weeksLeft);
+    const warn = models.filter(m => m.weeksLeft !== null && m.weeksLeft > TW && m.weeksLeft <= TW * 2).sort((x, y) => x.weeksLeft - y.weeksLeft);
     const all = crit.map(m => [m, 'crit']).concat(warn.map(m => [m, 'mon']));
     if (!all.length) return;                                     // keep the page's own green "all clear" bar
     const defs = new Map(b.getM().map(d => [d.name, d]));
