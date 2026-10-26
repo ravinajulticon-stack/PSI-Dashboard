@@ -2091,6 +2091,18 @@ function runwayColor(w){
   if(w===null)return'#4e5d75';
   return w<=TARGET_WEEKS?'#ff3b30':w<=TARGET_WEEKS*2?'#ff9500':'#34c759';
 }
+// Philips Safes has a 45-day lead time (confirmed Oct 2026), so its runway thresholds are 45/7 weeks. Samsung keeps TARGET_WEEKS and Locks its own LEAD (both 60 days).
+const PH_TARGET_WEEKS=45/7;
+function phStatusPill(m){
+  if(m.weeksLeft===null)return`<span class="pill pill-gray">No activity</span>`;
+  if(m.weeksLeft<=PH_TARGET_WEEKS)return`<span class="pill pill-red">Critical</span>`;
+  if(m.weeksLeft<=PH_TARGET_WEEKS*2)return`<span class="pill pill-amber">Monitor</span>`;
+  return`<span class="pill pill-green">Healthy</span>`;
+}
+function phRunwayColor(w){
+  if(w===null)return'#4e5d75';
+  return w<=PH_TARGET_WEEKS?'#ff3b30':w<=PH_TARGET_WEEKS*2?'#ff9500':'#34c759';
+}
 
 let toastTimer=null;
 function showToast(msg,type='success'){
@@ -4922,7 +4934,7 @@ function renderPhilipsDashboard(){
   const models=computePhilipsModels(entries);
   const allWeeks=models[0]?.allWeeks||[];
   document.getElementById('philipsDashMeta').textContent=
-    `${allWeeks.length} weeks tracked ${allWeeks[0]||'?'} to ${allWeeks[allWeeks.length-1]||'?'} · 60-day validity`;
+    `${allWeeks.length} weeks tracked ${allWeeks[0]||'?'} to ${allWeeks[allWeeks.length-1]||'?'} · 45-day validity`;
   const wrl=document.getElementById('philipsWeekLabel');
   if(wrl) wrl.textContent=allWeeks.length?`Latest: ${allWeeks[allWeeks.length-1]}`:'' ;
   phRenderMetrics(models,allWeeks);
@@ -4939,7 +4951,7 @@ function phRenderMetrics(models,allWeeks){
   const totalRE=models.reduce((a,m)=>a+m.totalRE,0);
   const totalProj=models.reduce((a,m)=>a+m.totalProj,0);
   const avgWk=(allWeeks.length?(totalS/allWeeks.length):0).toFixed(1);
-  const critical=models.filter(m=>m.weeksLeft!==null&&m.weeksLeft<=TARGET_WEEKS).length;
+  const critical=models.filter(m=>m.weeksLeft!==null&&m.weeksLeft<=PH_TARGET_WEEKS).length;
   // Min / Max across all models with stock data
   const withStock=models.filter(m=>m.latestInv>0);
   const minModel=withStock.length?withStock.reduce((a,m)=>m.latestInv<a.latestInv?m:a):null;
@@ -4962,16 +4974,16 @@ function phRenderMetrics(models,allWeeks){
       <div class="metric-label">Project channel</div><div class="metric-value mv-orange">${totalProj}</div>
       <div class="metric-sub">total project units</div></div>
     <div class="metric-card" style="border-top:3px solid ${critical>0?'var(--mac-red)':'var(--mac-green)'}"><span class="metric-icon">${critical>0?'⚠️':'✅'}</span>
-      <div class="metric-label">Below 60-day runway</div><div class="metric-value ${critical>0?'mv-red':'mv-green'}">${critical}</div>
+      <div class="metric-label">Below 45-day runway</div><div class="metric-value ${critical>0?'mv-red':'mv-green'}">${critical}</div>
       <div class="metric-sub">model${critical!==1?'s':''} at risk</div></div>`;
 }
 
 function phRenderAlerts(models){
-  const critical=models.filter(m=>m.weeksLeft!==null&&m.weeksLeft<=TARGET_WEEKS).sort((a,b)=>a.weeksLeft-b.weeksLeft);
-  const warn=models.filter(m=>m.weeksLeft!==null&&m.weeksLeft>TARGET_WEEKS&&m.weeksLeft<=TARGET_WEEKS*2).sort((a,b)=>a.weeksLeft-b.weeksLeft);
+  const critical=models.filter(m=>m.weeksLeft!==null&&m.weeksLeft<=PH_TARGET_WEEKS).sort((a,b)=>a.weeksLeft-b.weeksLeft);
+  const warn=models.filter(m=>m.weeksLeft!==null&&m.weeksLeft>PH_TARGET_WEEKS&&m.weeksLeft<=PH_TARGET_WEEKS*2).sort((a,b)=>a.weeksLeft-b.weeksLeft);
   let html='';
   critical.forEach(m=>html+=`<div class="alert-card" onclick="phOpenModal('${m.name}')">
-    <div class="alert-icon-wrap">&#9888;</div><div class="alert-text"><b>${m.name}</b> — Critical: ${m.avgS.toFixed(2)} units/wk avg sell-out, stock runs out before 60-day window.</div>
+    <div class="alert-icon-wrap">&#9888;</div><div class="alert-text"><b>${m.name}</b> — Critical: ${m.avgS.toFixed(2)} units/wk avg sell-out, stock runs out before 45-day window.</div>
     <div class="alert-badge">${m.weeksLeft} wks</div></div>`);
   warn.forEach(m=>html+=`<div class="alert-card warn" onclick="phOpenModal('${m.name}')">
     <div class="alert-icon-wrap">&#9432;</div><div class="alert-text"><b>${m.name}</b> — Monitor: ${m.weeksLeft} weeks remaining at current sell-out rate.</div>
@@ -4983,13 +4995,13 @@ function phRenderAlerts(models){
 function phRenderRunway(models){
   const MAX=30;
   document.getElementById('philipsRunwayBars').innerHTML=models.map(m=>{
-    const w=m.weeksLeft,pct=w===null?4:Math.min(100,(w/MAX)*100),tPct=(TARGET_WEEKS/MAX)*100,col=runwayColor(w);
+    const w=m.weeksLeft,pct=w===null?4:Math.min(100,(w/MAX)*100),tPct=(PH_TARGET_WEEKS/MAX)*100,col=phRunwayColor(w);
     return`<div class="runway-row">
       <span class="runway-model" onclick="phOpenModal('${m.name}')" title="${m.name}">${m.name}</span>
       <div class="runway-track"><div class="runway-fill" style="width:${pct}%;background:${col}"></div>
         <div class="target-line" style="left:${tPct}%"></div></div>
       <span class="runway-weeks" style="color:${col}">${w!==null?w+' wk':'—'}</span>
-      <div class="runway-status">${statusPill(m)}</div></div>`;
+      <div class="runway-status">${phStatusPill(m)}</div></div>`;
   }).join('');
 }
 
@@ -4998,8 +5010,8 @@ function phGetVisible(models){
   const q=phState.search.toLowerCase();
   if(q)list=list.filter(m=>m.name.toLowerCase().includes(q));
   if(phState.filter==='active')list=list.filter(m=>m.totalS>0);
-  else if(phState.filter==='critical')list=list.filter(m=>m.weeksLeft!==null&&m.weeksLeft<=TARGET_WEEKS);
-  else if(phState.filter==='healthy')list=list.filter(m=>m.weeksLeft===null||m.weeksLeft>TARGET_WEEKS*2);
+  else if(phState.filter==='critical')list=list.filter(m=>m.weeksLeft!==null&&m.weeksLeft<=PH_TARGET_WEEKS);
+  else if(phState.filter==='healthy')list=list.filter(m=>m.weeksLeft===null||m.weeksLeft>PH_TARGET_WEEKS*2);
   list.sort((a,b)=>{
     if(phState.sort==='model')return phState.sortDir*a.name.localeCompare(b.name);
     const map={inv:'latestInv',weeks:'weeksLeft',sellout:'totalS',re:'totalRE',proj:'totalProj'};
@@ -5021,7 +5033,7 @@ function phRenderTable(models){
       const p=invData[i-1];const c=p===undefined?'#007aff':v<p?'#ff3b30':v>p?'#34c759':'#007aff';
       return`<div class="spark-bar" style="height:${h}px;background:${c}"></div>`;
     }).join('');
-    const wc=m.weeksLeft!==null?(m.weeksLeft<=TARGET_WEEKS?'var(--mac-red)':m.weeksLeft<=TARGET_WEEKS*2?'var(--mac-orange)':'var(--mac-green)'):'var(--mac-text3)';
+    const wc=m.weeksLeft!==null?(m.weeksLeft<=PH_TARGET_WEEKS?'var(--mac-red)':m.weeksLeft<=PH_TARGET_WEEKS*2?'var(--mac-orange)':'var(--mac-green)'):'var(--mac-text3)';
     const minI=Math.ceil(m.avgS*(45/7));
     const maxI=minI*2;
     return`<tr data-phmodel="${m.name}" class="${phState.selectedRow===m.name?'selected':''}">
@@ -5035,7 +5047,7 @@ function phRenderTable(models){
       <td style="color:#5ac8fa;font-weight:600;">${minI}</td>
       <td style="color:#30d158;font-weight:600;">${maxI}</td>
       <td><span style="font-weight:600;color:${wc}">${m.weeksLeft!==null?m.weeksLeft+' wks':'—'}</span></td>
-      <td>${statusPill(m)}</td></tr>`;
+      <td>${phStatusPill(m)}</td></tr>`;
   }).join('');
   // Total row
   const allM=computePhilipsModels(phGetEntries());
@@ -5109,7 +5121,7 @@ function phOpenModal(name){
   phState.selectedRow=name;phRenderTable(models);
   document.getElementById('modalTitle').textContent=m.name;
   document.getElementById('modalSub').textContent=`${m.allWeeks.length} weeks tracked · Philips Safes`;
-  const wc=runwayColor(m.weeksLeft);
+  const wc=phRunwayColor(m.weeksLeft);
   document.getElementById('modalGrid').innerHTML=`
     <div class="modal-stat"><div class="modal-stat-label">Latest inventory</div><div class="modal-stat-val" style="color:var(--mac-accent)">${m.latestInv}</div></div>
     <div class="modal-stat"><div class="modal-stat-label">Total sell-out</div><div class="modal-stat-val" style="color:var(--mac-green)">${m.totalS}</div></div>
@@ -5417,7 +5429,7 @@ function renderPhilipsHistory(){
     const latestI=latestE?latestE.i:0;
     const avgSnum=totalS/8;
     const runway=avgSnum>0?Math.round(latestI/avgSnum):null;
-    const rwColor=runway===null?'var(--mac-text3)':runway<=TARGET_WEEKS?'var(--mac-red)':runway<=TARGET_WEEKS*2?'var(--mac-orange)':'var(--mac-green)';
+    const rwColor=runway===null?'var(--mac-text3)':runway<=PH_TARGET_WEEKS?'var(--mac-red)':runway<=PH_TARGET_WEEKS*2?'var(--mac-orange)':'var(--mac-green)';
     return`<tr><td class="model-col">${md.name}</td>${cols}
       <td class="val-summary" style="color:var(--mac-green);font-weight:600">${totalS}</td>
       <td class="val-summary">${avgS}</td>
