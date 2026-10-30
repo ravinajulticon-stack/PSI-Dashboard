@@ -8,6 +8,8 @@
 // row, applies the one change to the fresh copy and writes it back only if nobody else saved in between, so two people cannot overwrite each other.
 // The old Weekly Forecast card reads these deliveries too, and its Incoming boxes are locked (see the section near the end of this file).
 // To undo: remove this script tag (the board and the old card fall back to the old Incoming boxes, which are unchanged).
+// Arrived lines: a line marked Arrived stops being "coming", but its units are not in your weekly stock figures until you enter that week. So it keeps counting as an arrival (in the week it was
+// received) until the week has been entered, and the Deliveries tab says so. Once the week is entered it drops out by itself, so nothing is counted twice.
 (function () {
   if (window.PSI_PIPELINE) return;
   const OWNER = 'Avin Karadaky', STALE_DAYS = 7;
@@ -36,9 +38,20 @@
     const due = parseD(line.due), rev = parseD(line.revised), eff = rev || due, open = OPEN.indexOf(line.status) >= 0;
     return { eff, due, open, delay: rev && due ? daysBetween(due, rev) : 0, overdue: !!(open && eff && daysBetween(today, eff) < 0), daysOut: eff ? daysBetween(today, eff) : null };
   }
-  function arrivalsFrom(lines, today) {                                            // {model: {W47: qty}} for open, not overdue lines: the shape the board already reads
-    const out = {};
-    lines.forEach(l => { if (l.deleted) return; const i = info(l, today), q = +l.qty; if (!i.open || i.overdue || !i.eff || !(q > 0)) return; const o = out[l.model] = out[l.model] || {}, w = wkKey(i.eff); o[w] = (o[w] || 0) + q; });
+  function arrivedPending(lines, latestNum, today) {                                // Arrived lines whose week has NOT been entered yet: their units are not in the stock figures, so they still count as arrivals
+    const out = []; if (latestNum == null || isNaN(latestNum)) return out;
+    lines.forEach(l => {
+      if (l.deleted || l.status !== 'Arrived' || !(+l.qty > 0)) return;
+      const d = parseD(l.arrivedOn) || parseD(l.revised) || parseD(l.due); if (!d || (today && daysBetween(d, today) > 28)) return;      // an arrival older than 4 weeks is certainly in the stock entries by now
+      let n = isoWeek(d) - latestNum; if (n <= -26) n += isoWeek(new Date(d.getFullYear() - 1, 11, 28));                                   // year end: the previous year may have 52 or 53 weeks
+      if (n > 0 && n <= 26) out.push(Object.assign({}, l, { _date: d, _w: wkKey(d) }));
+    });
+    return out;
+  }
+  function arrivalsFrom(lines, today, latestNum) {                                  // {model: {W47: qty}}: open, not overdue lines, plus arrived lines not yet in the stock entries (the shape the board already reads)
+    const out = {}, add = (m, w, q) => { const o = out[m] = out[m] || {}; o[w] = (o[w] || 0) + q; };
+    lines.forEach(l => { if (l.deleted) return; const i = info(l, today), q = +l.qty; if (!i.open || i.overdue || !i.eff || !(q > 0)) return; add(l.model, wkKey(i.eff), q); });
+    arrivedPending(lines, latestNum, today).forEach(l => add(l.model, l._w, +l.qty));
     return out;
   }
   // </pure>
@@ -86,9 +99,10 @@
   const remove = (k, id) => mutate(k, lines => lines.map(x => x.id === id ? stamp(Object.assign({}, x, { deleted: true })) : x));
   const confirmList = (k, none) => mutate(k, lines => lines, none ? { confirmed: 'none' } : null);   // stamps the list as checked today without changing a line; 'none' records that nothing is on order
   const live = k => S[k].lines.filter(l => !l.deleted);
+  const latestWeek = k => { try { const m = cfgs[k].models()[0]; if (!m || !m.allWeeks || !m.allWeeks.length) return null; const n = parseInt(String(m.allWeeks[m.allWeeks.length - 1]).replace(/\D/g, ''), 10); return isNaN(n) ? null : n; } catch (e) { return null; } };   // the last week with stock entered
   const P = window.PSI_PIPELINE = {
     lines: k => live(k).map(l => Object.assign({}, l)), meta: k => S[k].meta, loaded: k => S[k].loaded, info: l => info(l, new Date()),
-    arrivals: k => arrivalsFrom(S[k].lines, new Date()), models: k => new Set(live(k).map(l => l.model)), refresh: load, onChange: f => listeners.push(f),
+    arrivals: k => arrivalsFrom(S[k].lines, new Date(), latestWeek(k)), arrivedPending: k => arrivedPending(S[k].lines, latestWeek(k), new Date()), latestWeek, models: k => new Set(live(k).map(l => l.model)), refresh: load, onChange: f => listeners.push(f),
     save, remove, confirmList, isoWeek, wkKey, fmtDate, parseD, daysBetween, who, openReport, setOffline: v => { offline = !!v; }, owner: OWNER, staleDays: STALE_DAYS, cfgs
   };
   // ---------------- styles ----------------
@@ -184,7 +198,7 @@
   function render(k) {
     const c = cfgs[k], host = document.getElementById(c.id); if (!host) return;
     const brandCol = getComputedStyle(document.getElementById(c.box)).getPropertyValue('--rd-brand').trim(); if (brandCol) host.style.setProperty('--rd-brand', brandCol);
-    host.textContent = ''; if (k === 'samsung') refreshHeader(host); const wrap = el('div', 'dl-wrap'), st = stats(k), t = today(), meta = S[k].meta;
+    host.textContent = ''; if (k === 'samsung') refreshHeader(host); const wrap = el('div', 'dl-wrap'), st = stats(k), t = today(), meta = S[k].meta; const pendMap = {}; arrivedPending(live(k), latestWeek(k), t).forEach(x => { pendMap[x.id] = x._w; });
     const head = el('div', 'dl-head'), title = el('div', 'dl-title'); title.appendChild(el('h2', null, 'Deliveries On Order')); head.appendChild(title);
     const btns = el('div', 'dl-btns'), add = el('button', 'dl-btn primary', '+ Add Delivery'), rep = el('button', 'dl-btn', 'Weekly Supply Report'); add.type = rep.type = 'button';
     const hasOpen = live(k).some(l => info(l, t).open), confLabel = hasOpen ? 'Confirm List Is Current' : 'Confirm Nothing On Order', conf = el('button', 'dl-btn', confLabel); conf.type = 'button';
@@ -219,7 +233,7 @@
       td(l.model, 'dl-name'); td(l.po || '\u2014', l.po ? '' : 'dl-dim'); td((+l.qty || 0).toLocaleString(), 'num'); td(fmtDate(i.due)); td(l.revised ? fmtDate(parseD(l.revised)) : '\u2014', l.revised ? '' : 'dl-dim');
       td(!i.open || !i.delay ? '\u2014' : (i.delay > 0 ? '+' + i.delay + ' days' : (-i.delay) + ' days early'), !i.open || !i.delay ? 'dl-dim' : (i.delay > 0 ? 'dl-bad' : 'dl-good'));
       const sd = el('td'), pill = el('span', 'dl-pill', l.status); pill.style.setProperty('--c', STAT_COL[l.status] || 'var(--mac-text2)'); sd.appendChild(pill);
-      if (i.overdue) { const o = el('span', 'dl-pill', 'Overdue'); o.style.setProperty('--c', 'var(--mac-red)'); o.title = 'The date has passed and it is not marked Arrived, so it is not counted as coming. Update the date or mark it Arrived.'; sd.appendChild(o); } tr.appendChild(sd);
+      if (i.overdue) { const o = el('span', 'dl-pill', 'Overdue'); o.style.setProperty('--c', 'var(--mac-red)'); o.title = 'The date has passed and it is not marked Arrived, so it is not counted as coming. Update the date or mark it Arrived.'; sd.appendChild(o); } if (pendMap[l.id]) { const q = el('span', 'dl-pill', 'Counts Until ' + pendMap[l.id] + ' Entry'); q.style.setProperty('--c', 'var(--mac-green)'); q.title = 'This delivery has arrived, but its units are not in your weekly stock entries yet, so the forecast still counts it. It stops counting once you enter that week.'; sd.appendChild(q); } tr.appendChild(sd);
       const n = td(l.note || '', 'note'); if (l.note) n.title = l.note;
       const a = el('td', 'act'), mk = (label, fn, cls) => { const b = el('button', 'dl-link' + (cls ? ' ' + cls : ''), label); b.type = 'button'; b.addEventListener('click', fn); a.appendChild(b); return b; };
       mk('Edit', () => openModal(k, l)); if (i.open) mk('Arrived', () => act(k, () => save(k, Object.assign({}, l, { status: 'Arrived', arrivedOn: toIso(t) }))));
@@ -355,7 +369,7 @@
     if (this !== window.localStorage || !isInc(key)) return v;
     try {
       const k = INC_KEYS[key], lines = live(k); if (!lines.length) return v;
-      const arr = arrivalsFrom(S[k].lines, new Date()), merged = Object.assign({}, JSON.parse(v || '{}'));
+      const arr = arrivalsFrom(S[k].lines, new Date(), latestWeek(k)), merged = Object.assign({}, JSON.parse(v || '{}'));
       new Set(lines.map(l => l.model)).forEach(n => { merged[n] = arr[n] || {}; });
       return JSON.stringify(merged);
     } catch (e) { return v; }
