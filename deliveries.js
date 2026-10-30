@@ -198,7 +198,7 @@
   function render(k) {
     const c = cfgs[k], host = document.getElementById(c.id); if (!host) return;
     const brandCol = getComputedStyle(document.getElementById(c.box)).getPropertyValue('--rd-brand').trim(); if (brandCol) host.style.setProperty('--rd-brand', brandCol);
-    host.textContent = ''; if (k === 'samsung') refreshHeader(host); const wrap = el('div', 'dl-wrap'), st = stats(k), t = today(), meta = S[k].meta; const pendMap = {}; arrivedPending(live(k), latestWeek(k), t).forEach(x => { pendMap[x.id] = x._w; });
+    host.textContent = ''; if (k === 'samsung') refreshHeader(host); const wrap = el('div', 'dl-wrap'), st = stats(k), t = today(), meta = S[k].meta;
     const head = el('div', 'dl-head'), title = el('div', 'dl-title'); title.appendChild(el('h2', null, 'Deliveries On Order')); head.appendChild(title);
     const btns = el('div', 'dl-btns'), add = el('button', 'dl-btn primary', '+ Add Delivery'), rep = el('button', 'dl-btn', 'Weekly Supply Report'); add.type = rep.type = 'button';
     const hasOpen = live(k).some(l => info(l, t).open), confLabel = hasOpen ? 'Confirm List Is Current' : 'Confirm Nothing On Order', conf = el('button', 'dl-btn', confLabel); conf.type = 'button';
@@ -228,6 +228,7 @@
     const t = today(), f = ui[k], term = f.q.trim().toLowerCase(), items = live(k).map(l => ({ l, i: info(l, t) }));
     const keep = x => (f.chip === 'all' || (f.chip === 'open' && x.i.open) || (f.chip === 'delayed' && x.i.open && x.i.delay > 0) || (f.chip === 'overdue' && x.i.overdue) || (f.chip === 'arrived' && x.l.status === 'Arrived')) && (!term || (x.l.model + ' ' + (x.l.po || '')).toLowerCase().indexOf(term) >= 0);
     const list = items.filter(keep).sort((a, b) => (b.i.open - a.i.open) || ((a.i.eff || 0) - (b.i.eff || 0)));
+    const pendMap = {}; arrivedPending(live(k), latestWeek(k), t).forEach(x => { pendMap[x.id] = x._w; });          // arrived lines still counted, with the week they count in
     list.forEach(({ l, i }) => {
       const tr = el('tr'), td = (txt, cls) => { const d = el('td', cls || null, txt); tr.appendChild(d); return d; };
       td(l.model, 'dl-name'); td(l.po || '\u2014', l.po ? '' : 'dl-dim'); td((+l.qty || 0).toLocaleString(), 'num'); td(fmtDate(i.due)); td(l.revised ? fmtDate(parseD(l.revised)) : '\u2014', l.revised ? '' : 'dl-dim');
