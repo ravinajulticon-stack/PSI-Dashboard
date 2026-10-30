@@ -160,7 +160,7 @@
     const P = window.PSI_PIPELINE, legacy = incomingFor(k), incoming = Object.assign({}, legacy), pl = P ? P.lines(k) : [], over = new Set();
     if (pl.length) { const arrs = P.arrivals(k); P.models(k).forEach(n => { incoming[n] = arrs[n] || {}; over.add(n); }); }          // a model with a line on the Deliveries tab ignores the old Incoming boxes
     const pi = pl.map(l => ({ l, i: P.info(l) })).filter(x => x.i.open), legacyN = Object.keys(legacy).filter(n => !over.has(n)).reduce((s, n) => s + Object.keys(legacy[n] || {}).length, 0);
-    const pipe = P ? { any: pl.length > 0, n: pi.filter(x => !x.i.overdue).length, units: sum(pi.filter(x => !x.i.overdue).map(x => +x.l.qty || 0)), delayed: pi.filter(x => x.i.delay > 0).length, overdue: pi.filter(x => x.i.overdue).length, meta: P.meta(k), legacyN } : null;
+    const pipe = P ? { any: pl.length > 0, n: pi.filter(x => !x.i.overdue).length, units: sum(pi.filter(x => !x.i.overdue).map(x => +x.l.qty || 0)), delayed: pi.filter(x => x.i.delay > 0).length, overdue: pi.filter(x => x.i.overdue).length, meta: P.meta(k), legacyN, pend: (() => { const a = P.arrivedPending ? P.arrivedPending(k) : []; return { n: a.length, units: sum(a.map(x => +x.qty || 0)) }; })() } : null;
     const tots = models.map(m => ({ n: m.name, t: Math.max(0, sum(m.s.map(v => Math.max(0, v || 0)))) })).sort((a, c) => c.t - a.t);
     const grand = sum(tots.map(x => x.t)) || 1; const core = new Set(); let run = 0; for (const x of tots) { if (run / grand >= 0.8) break; core.add(x.n); run += x.t; }
     const OO = window.PSI_ONEOFF; const list = models.map(m => analyse(m, b.lead, latestNum, incoming, core.has(m.name), OO ? OO.weeksFor(k, m.name) : undefined));
@@ -171,7 +171,8 @@
     });
     list.sort((a, c) => RANK[a.action] - RANK[c.action] || (c.risk || 0) - (a.risk || 0) || (a.cover == null ? 1e9 : a.cover) - (c.cover == null ? 1e9 : c.cover));
     const aheadOf = x => { let n = P.isoWeek(x.eff) - latestNum; if (n <= -26) n += 52; return n; };
-    list.forEach(a => { a.dl = pi.filter(x => x.l.model === a.name && x.i.eff).map(x => ({ po: x.l.po, qty: +x.l.qty || 0, eff: x.i.eff, due: x.i.due, delay: x.i.delay, overdue: x.i.overdue })).sort((p, q) => p.eff - q.eff); a.nextLine = a.nextArr ? a.dl.find(x => !x.overdue && aheadOf(x) === a.nextArr.ahead) : null; });
+    const apl = P && P.arrivedPending ? P.arrivedPending(k) : [];
+    list.forEach(a => { a.dl = pi.filter(x => x.l.model === a.name && x.i.eff).map(x => ({ po: x.l.po, qty: +x.l.qty || 0, eff: x.i.eff, due: x.i.due, delay: x.i.delay, overdue: x.i.overdue })).concat(apl.filter(l => l.model === a.name).map(l => ({ po: l.po, qty: +l.qty || 0, eff: l._date, due: l._date, delay: 0, overdue: false, arrived: true }))).sort((p, q) => p.eff - q.eff); a.nextLine = a.nextArr ? a.dl.find(x => !x.overdue && aheadOf(x) === a.nextArr.ahead) : null; });
     return { list, latestLbl, latestNum, pipe, lines: Object.values(incoming).reduce((a, o) => a + Object.keys(o || {}).length, 0) };
   }
   function stockOutText(a, which, latestNum) {
@@ -206,7 +207,7 @@
     add('Demand Over ' + L + ' Days: Likely', Math.round(a.p50) + ' Units'); add('Cautious (80% Sure)', Math.round(a.p80) + ' Units'); add('Worst Case (90% Sure)', Math.round(a.p90) + ' Units');
     add('Stock-Out: Likely / Cautious', stockOutText(a, 'likely', latestNum) + ' / ' + stockOutText(a, 'cautious', latestNum));
     const PP = window.PSI_PIPELINE;
-    add('Deliveries Entered', a.dl && a.dl.length ? a.dl.map(x => (x.po ? x.po + ': ' : '') + x.qty + ' on ' + PP.fmtDate(x.eff) + (x.overdue ? ' (Overdue, Not Counted)' : (x.delay > 0 ? ' (' + x.delay + ' Days Late)' : ''))).join('; ') : (a.onOrder > 0 ? Object.keys(a.arr).map(Number).sort((x, y) => x - y).map(t => wkLabel(latestNum + t) + ': ' + a.arr[t]).join(', ') : 'None'));
+    add('Deliveries Entered', a.dl && a.dl.length ? a.dl.map(x => (x.po ? x.po + ': ' : '') + x.qty + ' on ' + PP.fmtDate(x.eff) + (x.arrived ? ' (Arrived, Not Yet In Your Stock Entries)' : (x.overdue ? ' (Overdue, Not Counted)' : (x.delay > 0 ? ' (' + x.delay + ' Days Late)' : '')))).join('; ') : (a.onOrder > 0 ? Object.keys(a.arr).map(Number).sort((x, y) => x - y).map(t => wkLabel(latestNum + t) + ': ' + a.arr[t]).join(', ') : 'None'));
     add('Weeks Left Out Of The Estimate', a.emptyWeeks + ' Empty Shelf, ' + a.prelaunch + ' Before Launch' + (a.oneOffWeeks ? ', ' + a.oneOffWeeks + ' One-Off' : ''));
     add('Weeks Of History', a.series.length + (a.isNew ? ' (Short: Treat With Care)' : ''));
     if (a.suggest > 0 && ['Order Now', 'Watch', 'Expedite'].includes(a.action)) add('Suggested Order', a.suggest + ' Units (' + Math.round(a.svc * 100) + '% Cover + ' + CYCLE_WEEKS + ' Weeks)' + (a.capped ? '. Capped At ' + CAP_DAYS + ' Days Of Cover, Uncapped ' + a.suggestRaw : ''));
@@ -272,7 +273,7 @@
   function noteText(res) {
     const p = res.pipe, lines = res.lines, P = window.PSI_PIPELINE;
     if (p && p.any) {
-      let t = 'Deliveries counted: ' + p.n + ' on the Deliveries tab (' + p.units.toLocaleString() + ' units)' + (p.delayed ? ', ' + p.delayed + ' running late' : '') + (p.overdue ? ', ' + p.overdue + ' overdue and not counted' : '');
+      let t = 'Deliveries counted: ' + p.n + ' on the Deliveries tab (' + p.units.toLocaleString() + ' units)' + (p.delayed ? ', ' + p.delayed + ' running late' : '') + (p.overdue ? ', ' + p.overdue + ' overdue and not counted' : '') + (p.pend && p.pend.n ? ', plus ' + p.pend.n + ' arrived (' + p.pend.units.toLocaleString() + ' units) still counted until you enter their week' : '');
       if (p.meta && p.meta.updatedAt) { const age = P.daysBetween(new Date(p.meta.updatedAt), new Date()); t += '. Last updated ' + P.fmtDate(new Date(p.meta.updatedAt)) + (p.meta.updatedBy ? ' by ' + p.meta.updatedBy : '') + (age > P.staleDays ? ', which is ' + age + ' days ago: check the dates with ' + P.owner : ''); }
       return t + '.' + (p.legacyN ? ' Models with no delivery line use the older Incoming boxes.' : '') + ' Anything not entered is treated as not ordered.';
     }
