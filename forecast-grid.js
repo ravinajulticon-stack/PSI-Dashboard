@@ -221,7 +221,15 @@
       if (open) list.forEach(m => { h += rowHtml(m); });
     });
     h += '</tbody></table></div>';
-    h += '<div class="fg-leg"><span><i style="background: color-mix(in srgb, var(--mac-red) 30%, transparent)"></i>First Week Out Of Stock</span><span style="color: var(--mac-red)">Red: Below Lead Time Cover</span><span style="color: #0a84ff">Blue: Over 26 Weeks Of Cover</span><span style="color: var(--mac-green)">+300 Arrival From The Deliveries Tab</span><span style="color: var(--mac-text3)">Faded: Same As Last Week</span></div>';
+    const used = { out: false, low: false, exc: false, same: false }; let firstArr = null;                       // the legend lists only what is on screen, in this brand's own numbers
+    vis.forEach(m => { cellClasses(m.v, m.rate, m.lead, m.arr).forEach(k => { if (k) used[k] = true; }); if (!firstArr) m.arr.forEach((q, i) => { if (q > 0 && !firstArr) firstArr = [q, d.labels[i]]; }); });
+    const leg = [];
+    if (used.out) leg.push('<span><i style="background: color-mix(in srgb, var(--mac-red) 30%, transparent)"></i>First Week Out Of Stock</span>');
+    if (used.low) leg.push('<span style="color: var(--mac-red)">Red: Cover Below The ' + BR[brand].lead + '-Day Lead Time</span>');
+    if (used.exc) leg.push('<span style="color: #0a84ff">Blue: Over ' + EXCESS_WEEKS + ' Weeks Of Cover</span>');
+    leg.push(firstArr ? '<span style="color: var(--mac-green)">+' + firstArr[0] + ' Arrival From The Deliveries Tab (' + firstArr[1] + ')</span>' : '<span style="color: var(--mac-text3)">No Deliveries Due In These 8 Weeks</span>');
+    if (used.same) leg.push('<span style="color: var(--mac-text3)">Faded: Same As Last Week</span>');
+    h += '<div class="fg-leg">' + leg.join('') + '</div>';
     h += '<div class="fg-hint">Click a model row to open its drill-down. Demand is the same number the Supply Risk Board uses.</div></div>';
     host.innerHTML = h;
   }
