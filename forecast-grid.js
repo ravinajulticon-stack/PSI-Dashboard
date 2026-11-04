@@ -26,6 +26,16 @@
   function arrArray(arrMap) { const o = []; for (let i = 1; i <= HORIZON; i++) o.push((arrMap && arrMap[i]) || 0); return o; }      // the Board keys arrivals by weeks ahead (1 = next week)
   function project(now, rate, arr) { const out = []; let s = now; for (let i = 0; i < HORIZON; i++) { s = Math.max(0, s + (arr[i] || 0) - rate); out.push(s); } return out; }
   function tint(v, rate, leadWeeks) { if (!(rate > 0)) return ''; const c = v / rate; return c < leadWeeks ? 'out' : (c > EXCESS_WEEKS ? 'exc' : ''); }
+  function cellClasses(v, rate, leadWeeks, arr) {                                     // out = the FIRST stock-out (tinted); low = cover below the lead time or a later zero (red text); exc = over 26 weeks (blue text); same = unchanged
+    const cls = []; let seenOut = false;
+    for (let i = 0; i < HORIZON; i++) {
+      let k = '';
+      if (rate > 0) { if (v[i] <= 0.5) { k = seenOut ? 'low' : 'out'; seenOut = true; } else { const t = tint(v[i], rate, leadWeeks); k = t === 'out' ? 'low' : t; } }
+      if (!k && i > 0 && Math.round(v[i]) === Math.round(v[i - 1]) && !(arr && arr[i])) k = 'same';
+      cls.push(k);
+    }
+    return cls;
+  }
   function coverText(v, rate) { if (!(rate > 0)) return '-'; const c = v / rate; return c >= 52 ? '52+' : String(Math.round(c)); }
   function rateText(r) { return r < 10 ? String(Math.round(r * 10) / 10) : String(Math.round(r)); }
   function minCover(v, rate) { return rate > 0 ? Math.min.apply(null, v.map(x => x / rate)) : Infinity; }
@@ -33,7 +43,7 @@
     const a = list.slice(), byName = (x, y) => x.name < y.name ? -1 : x.name > y.name ? 1 : 0;
     if (ord === 'n') a.sort(byName);
     else if (ord === 's') a.sort((x, y) => y.rate - x.rate || byName(x, y));
-    else a.sort((x, y) => x.mc === y.mc ? byName(x, y) : (x.mc < y.mc ? -1 : 1));
+    else a.sort((x, y) => x.mc !== y.mc ? (x.mc < y.mc ? -1 : 1) : (x.cover !== y.cover ? (x.cover < y.cover ? -1 : 1) : byName(x, y)));
     return a;
   }
   function bridge(now, rate, arr, v) {
@@ -52,7 +62,7 @@
     }
     if (m.mc < m.lead) return { text: 'Never runs out by ' + last + ', but cover stays below the lead time (lowest ' + (Math.round(m.mc * 10) / 10) + ' weeks)', bad: true };
     if (m.group === 'O') return { text: 'Overstocked: about ' + (m.cover >= 52 ? '52+' : Math.round(m.cover)) + ' weeks of cover', bad: false };
-    return { text: 'Healthy through ' + last, bad: false };
+    return { text: 'Healthy through ' + last + ' at normal demand', bad: false };
   }
   function defaultOpen(counts) {                                                      // many models: only the groups that need a look start open
     const total = Object.keys(counts).reduce((a, g) => a + counts[g], 0), act = (counts.A || 0) + (counts.W || 0), o = {};
@@ -92,12 +102,13 @@
     '.fg-table td { text-align: right; padding: 8px 6px; border-top: 1px solid var(--mac-border); color: var(--mac-text); vertical-align: middle; }',
     '.fg-table td.dim { color: var(--mac-text2); }',
     '.fg-table td.same { color: var(--mac-text3); }',
-    '.fg-table td.out { background: color-mix(in srgb, var(--mac-red) 14%, transparent); color: var(--mac-red); }',
-    '.fg-table td.exc { background: color-mix(in srgb, var(--mac-accent) 14%, transparent); color: var(--mac-accent); }',
+    '.fg-table td.out { background: color-mix(in srgb, var(--mac-red) 16%, transparent); color: var(--mac-red); font-weight: 600; }',
+    '.fg-table td.low { color: var(--mac-red); }',
+    '.fg-table td.exc { color: var(--mac-accent); }',
     '.fg-arr { display: block; font-size: 10.5px; color: var(--mac-green); }',
     '.fg-r { cursor: pointer; }',
-    '.fg-r:hover td:not(.out):not(.exc) { background: color-mix(in srgb, var(--mac-text) 5%, transparent); }',
-    '.fg-r.sel td:not(.out):not(.exc) { background: color-mix(in srgb, var(--mac-text) 5%, transparent); }',
+    '.fg-r:hover td:not(.out) { background: color-mix(in srgb, var(--mac-text) 5%, transparent); }',
+    '.fg-r.sel td:not(.out) { background: color-mix(in srgb, var(--mac-text) 5%, transparent); }',
     '.fg-name { font-weight: 600; }',
     '.fg-chev { display: inline-block; width: 12px; color: var(--mac-text3); font-size: 10px; }',
     '.fg-sub { display: block; font-size: 10.5px; color: var(--mac-text3); font-weight: 400; margin-left: 12px; }',
@@ -113,7 +124,7 @@
     '.fg-pn .h button { font: inherit; font-size: 11.5px; padding: 3px 11px; border-radius: 8px; border: 1px solid var(--mac-border2); background: transparent; color: var(--mac-text); cursor: pointer; }',
     '.fg-pn .s { font-size: 12px; color: var(--mac-text2); margin: 0 0 8px; }',
     '.fg-pn .s.bad { color: var(--mac-red); }',
-    '.fg-pn svg { width: 100%; height: auto; display: block; margin: 0 0 6px; }',
+    '.fg-pn svg { width: 100%; max-width: 680px; height: auto; display: block; margin: 0 0 6px; }',
     '.fg-pn svg text { font-size: 11px; fill: var(--mac-text3); }',
     '.fg-pn table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; font-variant-numeric: tabular-nums; }',
     '.fg-pn td { text-align: right; padding: 4px 6px; border-top: 1px solid var(--mac-border); color: var(--mac-text); }',
@@ -150,9 +161,9 @@
   function panelHtml(m, d) {
     const msg = message(m, d.labels), w = 600, h = 92, px = 38, labels = d.labels;
     const hi = m.rate * (d.lead + 4), lo = m.rate * d.lead, mx = Math.max.apply(null, m.v.concat([m.now, hi])) * 1.08 || 1;
-    const X = i => px + i * (w - px - 8) / (HORIZON - 1), Y = v => h - 18 - v / mx * (h - 28);
+    const X = i => px + i * (w - px - 24) / (HORIZON - 1), Y = v => h - 18 - v / mx * (h - 28);
     let s = '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Stock for ' + esc(m.name) + '">';
-    if (m.rate > 0) s += '<rect x="' + px + '" y="' + Y(hi).toFixed(1) + '" width="' + (w - px - 8) + '" height="' + Math.max(1, Y(lo) - Y(hi)).toFixed(1) + '" style="fill: color-mix(in srgb, var(--mac-green) 14%, transparent)"/>';
+    if (m.rate > 0) s += '<rect x="' + px + '" y="' + Y(hi).toFixed(1) + '" width="' + (w - px - 24) + '" height="' + Math.max(1, Y(lo) - Y(hi)).toFixed(1) + '" style="fill: color-mix(in srgb, var(--mac-green) 14%, transparent)"/>';
     s += '<polyline points="' + m.v.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ') + '" style="fill: none; stroke: var(--mac-text2); stroke-width: 1.6"/>';
     m.v.forEach((v, i) => {
       if (v <= 0.5) s += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="3" style="fill: var(--mac-red)"/>';
@@ -169,7 +180,7 @@
     if (b.short.some(x => x > 0.5)) t += row('Short', b.short, v => v > 0.5 ? '<td style="color: var(--mac-red)">' + Math.round(v) + '</td>' : '<td class="same">-</td>');
     t += row('Weeks Of Cover', b.closing, v => '<td class="same">' + coverText(v, m.rate) + '</td>');
     t += '</tbody></table>';
-    const sug = m.sug > 0 && (m.group === 'A' || m.group === 'W') ? ' Suggested order: ' + m.sug + ' units.' : '';
+    const sug = m.sug > 0 && (m.group === 'A' || m.group === 'W') ? ' Suggested order from the Supply Risk Board: ' + m.sug + ' units.' : '';
     return '<div class="fg-pn" data-p="1"><div class="h"><b>' + esc(m.name) + ': Planner Bridge</b><button type="button" data-x="1">Close</button></div><p class="s' + (msg.bad ? ' bad' : '') + '">' + msg.text + '.' + sug + '</p>' + s + t + '</div>';
   }
   function render(brand) {
@@ -178,7 +189,7 @@
     if (!st.open) st.open = defaultOpen(counts);
     const vis = st.flt === 'all' ? d.list : d.list.filter(m => m.group === st.flt), mode = prefs.mode;
     let h = '<div class="fg"><div class="fg-bar"><span class="fg-seg" data-seg="mode"><button type="button" data-v="u" class="' + (mode === 'u' ? 'on' : '') + '">Units</button><button type="button" data-v="c" class="' + (mode === 'c' ? 'on' : '') + '">Weeks Of Cover</button></span>';
-    h += '<span class="fg-lab">Order</span><select class="fg-sel" data-sel="ord" aria-label="Order"><option value="u"' + (prefs.ord === 'u' ? ' selected' : '') + '>Most Urgent First</option><option value="s"' + (prefs.ord === 's' ? ' selected' : '') + '>Largest Demand First</option><option value="n"' + (prefs.ord === 'n' ? ' selected' : '') + '>Name</option></select>';
+    h += '<span class="fg-lab">Order Within Groups</span><select class="fg-sel" data-sel="ord" aria-label="Order"><option value="u"' + (prefs.ord === 'u' ? ' selected' : '') + '>Most Urgent First</option><option value="s"' + (prefs.ord === 's' ? ' selected' : '') + '>Largest Demand First</option><option value="n"' + (prefs.ord === 'n' ? ' selected' : '') + '>Name</option></select>';
     h += '<span class="fg-seg" data-seg="flt"><button type="button" data-v="all" class="' + (st.flt === 'all' ? 'on' : '') + '">All (' + d.list.length + ')</button>' + GROUPS.filter(g => counts[g[0]]).map(g => '<button type="button" data-v="' + g[0] + '" class="' + (st.flt === g[0] ? 'on' : '') + '">' + g[1] + ' (' + counts[g[0]] + ')</button>').join('') + '</span></div>';
     h += '<div class="fg-scroll"><table class="fg-table"><colgroup><col style="width: 214px"><col style="width: 58px"><col style="width: 62px">' + d.labels.map(() => '<col>').join('') + '</colgroup>';
     h += '<thead><tr><th class="l">Model</th><th>On Hand</th><th>Demand/Wk</th>' + d.labels.map((l, i) => '<th>' + l + '<small>' + d.days[i] + '</small></th>').join('') + '</tr></thead><tbody>';
@@ -188,9 +199,10 @@
       const open = m.name === st.sel;
       let r = '<tr class="fg-r' + (open ? ' sel' : '') + '" data-n="' + esc(m.name) + '" tabindex="0"><td class="l"><span class="fg-chev">' + (open ? '&#9662;' : '&#9656;') + '</span><span class="fg-name">' + esc(m.name) + '</span>' + subLine(m, d.labels) + '</td>';
       r += '<td class="dim">' + (mode === 'u' ? Math.round(m.now) : coverText(m.now, m.rate)) + '</td><td class="dim">' + rateText(m.rate) + '</td>';
+      const cls = cellClasses(m.v, m.rate, m.lead, m.arr);
       d.labels.forEach((l, i) => {
         const v = m.v[i], op = i === 0 ? m.now : m.v[i - 1], rc = m.arr[i], sh = Math.max(0, m.rate - (op + rc));
-        let k = tint(v, m.rate, m.lead); if (!k && i > 0 && Math.round(v) === Math.round(m.v[i - 1]) && !rc) k = 'same';
+        const k = cls[i];
         const tip = l + ': ' + Math.round(op) + ' - ' + rateText(m.rate) + ' demand' + (rc ? ' + ' + rc + ' arriving' : '') + ' = ' + Math.round(v) + (sh > 0.5 ? ' (short ' + Math.round(sh) + ')' : '');
         r += '<td class="' + k + '" title="' + esc(tip) + '">' + (mode === 'u' ? Math.round(v) : coverText(v, m.rate)) + (rc ? '<span class="fg-arr">+' + rc + '</span>' : '') + '</td>';
       });
@@ -206,7 +218,7 @@
       if (open) list.forEach(m => { h += rowHtml(m); });
     });
     h += '</tbody></table></div>';
-    h += '<div class="fg-leg"><span><i style="background: color-mix(in srgb, var(--mac-red) 30%, transparent)"></i>Below Lead Time Cover</span><span><i style="background: color-mix(in srgb, var(--mac-accent) 30%, transparent)"></i>Over 26 Weeks Of Cover</span><span style="color: var(--mac-green)">+300 Arrival From The Deliveries Tab</span><span style="color: var(--mac-text3)">Faded: Same As Last Week</span></div>';
+    h += '<div class="fg-leg"><span><i style="background: color-mix(in srgb, var(--mac-red) 30%, transparent)"></i>First Week Out Of Stock</span><span style="color: var(--mac-red)">Red: Below Lead Time Cover</span><span style="color: var(--mac-accent)">Blue: Over 26 Weeks Of Cover</span><span style="color: var(--mac-green)">+300 Arrival From The Deliveries Tab</span><span style="color: var(--mac-text3)">Faded: Same As Last Week</span></div>';
     h += '<div class="fg-hint">Click a model row to open its drill-down. Demand is the same number the Supply Risk Board uses.</div></div>';
     host.innerHTML = h;
   }
