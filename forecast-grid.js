@@ -19,6 +19,7 @@
   };
   const keyOf = brand => brand === 'philips' ? 'philips' : brand === 'plocks' ? 'plocks' : 'samsung';
   const GROUPS = [['A', 'Needs Action'], ['W', 'Watch'], ['H', 'Healthy'], ['O', 'Overstock'], ['L', 'Low Volume']];
+  const GCOL = { A: 'var(--mac-red)', W: 'var(--mac-orange)', H: 'var(--mac-green)', O: '#0a84ff', L: 'var(--mac-text3)' };      // the bar on the left of each group heading
   const PREF_KEY = 'psi_fgrid_v1', MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   // <pure>
   const HORIZON = 8, EXCESS_WEEKS = 26;
@@ -114,8 +115,10 @@
     '.fg-sub { display: block; font-size: 10.5px; color: var(--mac-text3); font-weight: 400; margin-left: 12px; }',
     '.fg-sub.bad { color: var(--mac-red); } .fg-sub.low { color: var(--mac-orange); } .fg-sub.over { color: #0a84ff; }',
     '.fg-tot td { font-weight: 600; background: color-mix(in srgb, var(--mac-text) 6%, transparent); border-top: 1px solid var(--mac-border2); border-bottom: 1px solid var(--mac-border2); }',
-    '.fg-g td { text-align: left; padding: 11px 6px 5px; font-size: 11.5px; color: var(--mac-text2); border-top: 1px solid var(--mac-border2); cursor: pointer; }',
-    '.fg-g b { color: var(--mac-text); font-size: 12.5px; }',
+    '.fg-g td { text-align: left; padding: 11px 8px; font-size: 12px; color: var(--mac-text2); cursor: pointer; background: color-mix(in srgb, var(--mac-text) 9%, transparent); border-top: 14px solid var(--mac-surface); border-left: 4px solid var(--g, var(--mac-text3)); }',
+    '.fg-g b { color: var(--mac-text); font-size: 14px; font-weight: 700; }',
+    '.fg-g .cnt { display: inline-block; min-width: 20px; text-align: center; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--g, var(--mac-text2)); background: color-mix(in srgb, var(--g, var(--mac-text3)) 18%, transparent); }',
+    '.fg-r td.l { padding-left: 24px; }',
     '.fg-g .fold { color: var(--mac-text3); font-size: 11px; margin-left: 10px; }',
     '.fg-dr td { padding: 0; border-top: 0; text-align: left; }',
     '.fg-pn { border: 1px solid var(--mac-border); border-radius: 10px; margin: 4px 0 10px; padding: 12px 14px; background: color-mix(in srgb, var(--mac-text) 3%, transparent); cursor: default; }',
@@ -214,7 +217,7 @@
       if (st.flt !== 'all' && st.flt !== g[0]) return;
       const list = sortModels(vis.filter(m => m.group === g[0]), prefs.ord); if (!list.length) return;
       const open = st.flt !== 'all' || st.open[g[0]];
-      h += '<tr class="fg-g" data-g="' + g[0] + '"><td colspan="' + (3 + d.labels.length) + '"><span class="fg-chev">' + (open ? '&#9662;' : '&#9656;') + '</span><b>' + g[1] + '</b> (' + list.length + ')' + (open ? '' : '<span class="fold">' + list.slice(0, 3).map(m => esc(m.name)).join(', ') + (list.length > 3 ? ', ...' : '') + '</span>') + '</td></tr>';
+      h += '<tr class="fg-g" data-g="' + g[0] + '" style="--g: ' + GCOL[g[0]] + '"><td colspan="' + (3 + d.labels.length) + '"><span class="fg-chev">' + (open ? '&#9662;' : '&#9656;') + '</span><b>' + g[1] + '</b><span class="cnt">' + list.length + '</span>' + (open ? '' : '<span class="fold">' + list.slice(0, 3).map(m => esc(m.name)).join(', ') + (list.length > 3 ? ', ...' : '') + '</span>') + '</td></tr>';
       if (open) list.forEach(m => { h += rowHtml(m); });
     });
     h += '</tbody></table></div>';
