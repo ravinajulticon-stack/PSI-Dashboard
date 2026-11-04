@@ -92,7 +92,7 @@
     '.fg-seg button { font: inherit; font-size: 11.5px; padding: 5px 11px; background: transparent; color: var(--mac-text2); border: 0; cursor: pointer; white-space: nowrap; }',
     '.fg-seg button + button { border-left: 1px solid var(--mac-border); }',
     '.fg-seg button.on { background: color-mix(in srgb, var(--mac-text) 9%, transparent); color: var(--mac-text); font-weight: 600; }',
-    '.fg-sel { font: inherit; font-size: 11.5px; padding: 5px 8px; background: transparent; color: var(--mac-text); border: 1px solid var(--mac-border2); border-radius: 8px; }',
+    '.fg-sel { width: auto; font: inherit; font-size: 11.5px; padding: 5px 8px; background: transparent; color: var(--mac-text); border: 1px solid var(--mac-border2); border-radius: 8px; }',
     '.fg-lab { font-size: 11px; color: var(--mac-text3); }',
     '.fg-scroll { overflow-x: auto; }',
     '.fg-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; font-variant-numeric: tabular-nums; }',
