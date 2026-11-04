@@ -104,7 +104,7 @@
     '.fg-table td.same { color: var(--mac-text3); }',
     '.fg-table td.out { background: color-mix(in srgb, var(--mac-red) 16%, transparent); color: var(--mac-red); font-weight: 600; }',
     '.fg-table td.low { color: var(--mac-red); }',
-    '.fg-table td.exc { color: var(--mac-accent); }',
+    '.fg-table td.exc { color: #0a84ff; }',
     '.fg-arr { display: block; font-size: 10.5px; color: var(--mac-green); }',
     '.fg-r { cursor: pointer; }',
     '.fg-r:hover td:not(.out) { background: color-mix(in srgb, var(--mac-text) 5%, transparent); }',
@@ -112,7 +112,7 @@
     '.fg-name { font-weight: 600; }',
     '.fg-chev { display: inline-block; width: 12px; color: var(--mac-text3); font-size: 10px; }',
     '.fg-sub { display: block; font-size: 10.5px; color: var(--mac-text3); font-weight: 400; margin-left: 12px; }',
-    '.fg-sub.bad { color: var(--mac-red); } .fg-sub.low { color: var(--mac-orange); } .fg-sub.over { color: var(--mac-accent); }',
+    '.fg-sub.bad { color: var(--mac-red); } .fg-sub.low { color: var(--mac-orange); } .fg-sub.over { color: #0a84ff; }',
     '.fg-tot td { font-weight: 600; background: color-mix(in srgb, var(--mac-text) 6%, transparent); border-top: 1px solid var(--mac-border2); border-bottom: 1px solid var(--mac-border2); }',
     '.fg-g td { text-align: left; padding: 11px 6px 5px; font-size: 11.5px; color: var(--mac-text2); border-top: 1px solid var(--mac-border2); cursor: pointer; }',
     '.fg-g b { color: var(--mac-text); font-size: 12.5px; }',
@@ -218,7 +218,7 @@
       if (open) list.forEach(m => { h += rowHtml(m); });
     });
     h += '</tbody></table></div>';
-    h += '<div class="fg-leg"><span><i style="background: color-mix(in srgb, var(--mac-red) 30%, transparent)"></i>First Week Out Of Stock</span><span style="color: var(--mac-red)">Red: Below Lead Time Cover</span><span style="color: var(--mac-accent)">Blue: Over 26 Weeks Of Cover</span><span style="color: var(--mac-green)">+300 Arrival From The Deliveries Tab</span><span style="color: var(--mac-text3)">Faded: Same As Last Week</span></div>';
+    h += '<div class="fg-leg"><span><i style="background: color-mix(in srgb, var(--mac-red) 30%, transparent)"></i>First Week Out Of Stock</span><span style="color: var(--mac-red)">Red: Below Lead Time Cover</span><span style="color: #0a84ff">Blue: Over 26 Weeks Of Cover</span><span style="color: var(--mac-green)">+300 Arrival From The Deliveries Tab</span><span style="color: var(--mac-text3)">Faded: Same As Last Week</span></div>';
     h += '<div class="fg-hint">Click a model row to open its drill-down. Demand is the same number the Supply Risk Board uses.</div></div>';
     host.innerHTML = h;
   }
